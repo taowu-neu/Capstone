@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgis/postgis:14-3.3
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: route-db
+    volumes:
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+      - ./data:/data
+    ports:
+      - "5432:5432"
+
+  importer:
+    build: .
+    container_name: csv_importer
+    depends_on:
+      - db
+    volumes:
+      - ./csv_data:/app/csv_data
+      - ./import_csv.sh:/app/import_csv.sh
+    environment:
+      PGPASSWORD: example
+    command: ["bash", "/app/import_csv.sh"]
