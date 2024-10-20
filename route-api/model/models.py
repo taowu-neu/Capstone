@@ -1,4 +1,11 @@
 from database.db import db
+from geoalchemy2 import Geometry
+
+class Node(db.Model):
+    __tablename__ = 'nodes'
+    id = db.Column(db.BigInteger, primary_key=True)
+    geom = db.Column(Geometry(geometry_type='POINT', srid=4326))  # PostGIS Geometry column
+
 class Edge(db.Model):
     __tablename__ = 'edges'
 

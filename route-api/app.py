@@ -4,7 +4,7 @@ from database.db import db
 from model.models import Edge
 from dotenv import load_dotenv
 from route.AStarAlgorithmn import AStarAlgorithm
-from create_graph import build_graph
+from create_graph import build_graph, verify_graph
 
 load_dotenv()
 app = Flask(__name__)
@@ -15,6 +15,7 @@ with app.app_context():
     db.init_app(app)
     graph = build_graph()
     print(graph)
+    verify_graph()
 
 @app.route('/')
 def home():
