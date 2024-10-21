@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Map Route Visualization</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+      #map {
+        height: 80vh;
+      }
+      .controls {
+        margin: 10px;
+      }
+      button {
+        padding: 10px 20px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <button onclick="calculateRoute()">Get Route</button>
+    </div>
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <script>
+      const map = L.map("map").setView([49.174, -123.184], 15); // Initialize map
+
+      // Add OpenStreetMap tiles
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      let source = [49.2292, -122.9932]; // Store source coordinates
+      let target = [49.2813912, -123.1217871]; // Store target coordinates
+      let sourceMarker, targetMarker; // Markers for source and target
+
+      // Function to handle map clicks
+      map.on("click", function (e) {
+        const { lat, lng } = e.latlng;
+
+        if (!source) {
+          sourceMarker = L.marker(source)
+            .addTo(map)
+            .bindPopup("Source")
+            .openPopup();
+        } else if (!target) {
+          targetMarker = L.marker([lat, lng])
+            .addTo(map)
+            .bindPopup("Target")
+            .openPopup();
+        } else {
+          alert("Both source and target are already set.");
+        }
+      });
+
+      // Function to calculate the route
+      async function calculateRoute() {
+        if (!source || !target) {
+          alert("Please select both source and target points on the map.");
+          return;
+        }
+
+        try {
+          const response = await fetch("http://127.0.0.1:5000/route", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ source, target }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch route");
+          }
+
+          const { path } = await response.json();
+          drawRoute(path);
+        } catch (error) {
+          console.error("Error:", error);
+          alert("Error fetching the route.");
+        }
+      }
+
+      // Function to draw the route on the map
+      function drawRoute(path) {
+        const latLngs = path.map((coord) => [coord[0], coord[1]]); // Convert to [lat, lng]
+        map.fitBounds(L.polyline(latLngs).getBounds());
+
+        // Place a marker at each coordinate
+        latLngs.forEach((coord, index) => {
+          L.marker(coord)
+            .addTo(map)
+            .bindPopup(`Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
+            .openPopup();
+        });
+      }
+    </script>
+  </body>
+</html>
