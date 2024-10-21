@@ -1,10 +1,14 @@
 from database.db import db
-from geoalchemy2 import Geometry
+# from geoalchemy2 import Geometry
 
 class Node(db.Model):
     __tablename__ = 'nodes'
     id = db.Column(db.BigInteger, primary_key=True)
-    geom = db.Column(Geometry(geometry_type='POINT', srid=4326))  # PostGIS Geometry column
+    longitude = db.Column(db.Float, nullable=False)
+    latitude = db.Column(db.Float, nullable=False)
+    # geom = db.Column(Geometry(geometry_type='POINT', srid=4326))  # PostGIS Geometry column
+    def __repr__(self):
+        return f"<Node(id={self.id}, longitude={self.longitude}, latitude={self.latitude})>"
 
 class Edge(db.Model):
     __tablename__ = 'edges'

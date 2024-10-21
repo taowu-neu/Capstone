@@ -3,17 +3,18 @@ from model.models import Edge, Node
 from database.db import db
 from sqlalchemy.orm import aliased
 from sqlalchemy import func
+from sqlalchemy import text
 
 def build_graph():
     # Create a directed graph
-    graph = nx.MultiGraph()
+    graph = nx.Graph()
     
     # Query all edges from the database
     edges =  Edge.query.add_columns(Edge.source, Edge.target, Edge.length).all()
     
     # Add edges to the graph
     for edge in edges:
-        graph.add_edge(edge.source, edge.target, length=edge.length)
+        graph.add_edge(edge.source, edge.target, weight=edge.length)
     
     return graph
 
@@ -58,9 +59,6 @@ def verify_graph():
     print(f"Total nodes: {G.number_of_nodes()}")
     print(f"Connected nodes: {len(largest_cc)}")
     print(f"Unconnected nodes: {len(unconnected_nodes)}")
-
-    if unconnected_nodes:
-        print("Unconnected nodes:", unconnected_nodes)
-    else:
-        print("All nodes are connected.")
     return edges_list
+
+    

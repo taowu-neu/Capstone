@@ -1,8 +1,5 @@
 # a_star_algorithm.py
 
-import networkx as nx
-from model.models import Edge
-
 class AStarAlgorithm:
     def __init__(self, graph):
         self.graph = graph
@@ -11,13 +8,36 @@ class AStarAlgorithm:
         """Calculates the heuristic for A* (currently a placeholder)."""
         return 0  # Implement your heuristic logic based on coordinates if needed
 
-    def calculate_path(self, source, target, max_distance):
-        """
-        Calculates the shortest path using the A* algorithm with a distance constraint.
+    def calculate_path(self, start, goal):
+        open_set = {start}
+        came_from = {}
 
-        :param source: The starting node.
-        :param target: The target node.
-        :param max_distance: The maximum distance allowed for the path.
-        :return: A tuple containing the path and its total length.
-        """
-        return ''
+        g_score = {node: float('inf') for node in self.graph.nodes()}
+        g_score[start] = 0
+
+        f_score = {node: float('inf') for node in self.graph.nodes()}
+        f_score[start] = self.heuristic(start, goal)
+
+        while open_set:
+            current = min(open_set, key=lambda node: f_score[node])
+
+            if current == goal:
+                # Reconstruct the path
+                path = []
+                while current in came_from:
+                    path.append(current)
+                    current = came_from[current]
+                path.append(start)
+                return path[::-1]  # Return reversed path
+
+            open_set.remove(current)
+            for neighbor in self.graph.neighbors(current):
+                tentative_g_score = g_score[current] + self.graph[current][neighbor]['weight']
+
+                if tentative_g_score < g_score[neighbor]:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, goal)
+                    open_set.add(neighbor)
+
+        return None  # Return None if there is no path
