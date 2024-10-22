@@ -9,20 +9,42 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
       #map {
-        height: 80vh;
+        height: 60vh;
       }
       .controls {
         margin: 10px;
+      }
+      input {
+        padding: 5px;
+        margin-right: 10px;
       }
       button {
         padding: 10px 20px;
         margin-top: 10px;
       }
+      #distance {
+        margin-top: 10px;
+        font-size: 16px;
+      }
+      #coordinates {
+        margin-top: 10px;
+        font-size: 14px;
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: #f9f9f9;
+        padding: 10px;
+        border: 1px solid #ddd;
+      }
     </style>
   </head>
   <body>
     <div class="controls">
+      <input type="text" id="source" placeholder="Enter source (lat,lng)" />
+      <input type="text" id="target" placeholder="Enter target (lat,lng)" />
       <button onclick="calculateRoute()">Get Route</button>
+      <button onclick="resetSelection()">Reset Points</button>
+      <div id="distance">Distance: Not calculated</div>
+      <div id="coordinates">Coordinates: Not available</div>
     </div>
     <div id="map"></div>
 
@@ -38,35 +60,39 @@
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
-      let source = [49.2292, -122.9932]; // Store source coordinates
-      let target = [49.2813912, -123.1217871]; // Store target coordinates
-      let sourceMarker, targetMarker; // Markers for source and target
-
-      // Function to handle map clicks
-      map.on("click", function (e) {
-        const { lat, lng } = e.latlng;
-
-        if (!source) {
-          sourceMarker = L.marker(source)
-            .addTo(map)
-            .bindPopup("Source")
-            .openPopup();
-        } else if (!target) {
-          targetMarker = L.marker([lat, lng])
-            .addTo(map)
-            .bindPopup("Target")
-            .openPopup();
-        } else {
-          alert("Both source and target are already set.");
-        }
-      });
+      let sourceMarker = null;
+      let targetMarker = null;
+      let markers = []; // Store all markers for the path
 
       // Function to calculate the route
       async function calculateRoute() {
+        const sourceInput = document.getElementById("source").value;
+        const targetInput = document.getElementById("target").value;
+
+        // Parse the input values
+        const source = parseCoordinates(sourceInput);
+        const target = parseCoordinates(targetInput);
+
         if (!source || !target) {
-          alert("Please select both source and target points on the map.");
+          alert("Please enter valid coordinates for both source and target.");
           return;
         }
+
+        // Add source and target markers to the map
+        if (sourceMarker) {
+          map.removeLayer(sourceMarker);
+        }
+        if (targetMarker) {
+          map.removeLayer(targetMarker);
+        }
+        sourceMarker = L.marker(source)
+          .addTo(map)
+          .bindPopup("Source")
+          .openPopup();
+        targetMarker = L.marker(target)
+          .addTo(map)
+          .bindPopup("Target")
+          .openPopup();
 
         try {
           const response = await fetch("http://127.0.0.1:5000/route", {
@@ -79,27 +105,76 @@
             throw new Error("Failed to fetch route");
           }
 
-          const { path } = await response.json();
+          const { path, distance } = await response.json();
           drawRoute(path);
+
+          // Display the distance returned from the backend
+          document.getElementById("distance").textContent = `Distance: ${distance.toFixed(2)} km`;
         } catch (error) {
           console.error("Error:", error);
           alert("Error fetching the route.");
         }
       }
 
-      // Function to draw the route on the map
-      function drawRoute(path) {
-        const latLngs = path.map((coord) => [coord[0], coord[1]]); // Convert to [lat, lng]
-        map.fitBounds(L.polyline(latLngs).getBounds());
+      // Function to parse input coordinates
+      function parseCoordinates(input) {
+        const parts = input.split(",");
+        if (parts.length !== 2) return null;
 
-        const polyline = L.polyline(latLngs, { color: 'blue', weight: 5 }).addTo(map);
+        const lat = parseFloat(parts[0].trim());
+        const lng = parseFloat(parts[1].trim());
+
+        if (isNaN(lat) || isNaN(lng)) return null;
+
+        return [lat, lng];
+      }
+
+      // Function to draw the route on the map with markers only and display the distance
+      function drawRoute(path) {
+        // Clear existing markers
+        markers.forEach((marker) => map.removeLayer(marker));
+        markers = [];
+
+        // Display all coordinates in the path
+        displayCoordinates(path);
+
+        const latLngs = path.map((coord) => [coord[0], coord[1]]);
+        map.fitBounds(latLngs);
+
         // Place a marker at each coordinate
-        // latLngs.forEach((coord, index) => {
-        //   L.marker(coord)
-        //     .addTo(map)
-        //     .bindPopup(`Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
-        //     .openPopup();
-        // });
+        latLngs.forEach((coord, index) => {
+          const marker = L.marker(coord)
+            .addTo(map)
+            .bindPopup(`Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
+            .openPopup();
+          markers.push(marker);
+        });
+      }
+
+      // Function to display all coordinates in the path
+      function displayCoordinates(path) {
+        const coordinatesDiv = document.getElementById("coordinates");
+        const formattedCoordinates = path
+          .map((coord, index) => `Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
+          .join("<br>");
+        coordinatesDiv.innerHTML = `Coordinates:<br>${formattedCoordinates}`;
+      }
+
+      // Function to reset the source and target selection
+      function resetSelection() {
+        if (sourceMarker) {
+          map.removeLayer(sourceMarker);
+        }
+        if (targetMarker) {
+          map.removeLayer(targetMarker);
+        }
+        markers.forEach((marker) => map.removeLayer(marker));
+        markers = [];
+        document.getElementById("source").value = "";
+        document.getElementById("target").value = "";
+        document.getElementById("distance").textContent = "Distance: Not calculated";
+        document.getElementById("coordinates").innerHTML = "Coordinates: Not available";
+        alert("Source and target have been reset. Enter new coordinates.");
       }
     </script>
   </body>

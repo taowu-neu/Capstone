@@ -33,9 +33,14 @@ def get_route():
     target_node = find_closest_node(target[1], target[0])
     
     algo = AStarAlgorithm(graph)
-    route = algo.calculate_path(source_node.id, target_node.id)
+    route, distance_in_km = algo.calculate_path(source_node.id, target_node.id)
+    
+    if route is None:
+        return jsonify({"error": "No route found"}), 404
+
     path = get_node_coordinates(route)
-    return jsonify({"path": path})
+    return jsonify({"path": path, "distance": distance_in_km})
+
 
 @app.route('/edges')
 def get_edges():
