@@ -92,13 +92,14 @@
         const latLngs = path.map((coord) => [coord[0], coord[1]]); // Convert to [lat, lng]
         map.fitBounds(L.polyline(latLngs).getBounds());
 
+        const polyline = L.polyline(latLngs, { color: 'blue', weight: 5 }).addTo(map);
         // Place a marker at each coordinate
-        latLngs.forEach((coord, index) => {
-          L.marker(coord)
-            .addTo(map)
-            .bindPopup(`Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
-            .openPopup();
-        });
+        // latLngs.forEach((coord, index) => {
+        //   L.marker(coord)
+        //     .addTo(map)
+        //     .bindPopup(`Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
+        //     .openPopup();
+        // });
       }
     </script>
   </body>
