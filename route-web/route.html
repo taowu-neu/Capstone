@@ -1,181 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Map Route Visualization</title>
-
-    <!-- Leaflet CSS -->
+    <title>Map Round Trip Visualization</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-      #map {
-        height: 60vh;
-      }
-      .controls {
-        margin: 10px;
-      }
-      input {
-        padding: 5px;
-        margin-right: 10px;
-      }
-      button {
-        padding: 10px 20px;
-        margin-top: 10px;
-      }
-      #distance {
-        margin-top: 10px;
-        font-size: 16px;
-      }
-      #coordinates {
-        margin-top: 10px;
-        font-size: 14px;
-        max-height: 200px;
-        overflow-y: auto;
-        background-color: #f9f9f9;
-        padding: 10px;
-        border: 1px solid #ddd;
-      }
+        #map { height: 60vh; }
+        .controls { margin: 10px; }
+        input { padding: 5px; margin-right: 10px; }
+        button { padding: 10px 20px; margin-top: 10px; }
+        #distance { margin-top: 10px; font-size: 16px; }
+        #coordinates { margin-top: 10px; font-size: 14px; max-height: 200px; overflow-y: auto; background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd; }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="controls">
-      <input type="text" id="source" placeholder="Enter source (lat,lng)" />
-      <input type="text" id="target" placeholder="Enter target (lat,lng)" />
-      <button onclick="calculateRoute()">Get Route</button>
-      <button onclick="resetSelection()">Reset Points</button>
-      <div id="distance">Distance: Not calculated</div>
-      <div id="coordinates">Coordinates: Not available</div>
+        <input type="number" id="distanceInput" placeholder="Enter distance in km" />
+        <button onclick="generateRoundTrip()">Generate Round Trip</button>
+        <div id="distance">Distance: Not calculated</div>
+        <div id="coordinates">Coordinates: Not available</div>
     </div>
     <div id="map"></div>
-
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
     <script>
-      const map = L.map("map").setView([49.174, -123.184], 15); // Initialize map
+        const map = L.map("map").setView([49.174, -123.184], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+        let markers = [];
 
-      // Add OpenStreetMap tiles
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      }).addTo(map);
+        async function generateRoundTrip() {
+            const distanceInput = document.getElementById("distanceInput").value;
+            const distance = parseFloat(distanceInput);
 
-      let sourceMarker = null;
-      let targetMarker = null;
-      let markers = []; // Store all markers for the path
+            if (!distance || distance <= 0) {
+                alert("Please enter a valid distance.");
+                return;
+            }
 
-      // Function to calculate the route
-      async function calculateRoute() {
-        const sourceInput = document.getElementById("source").value;
-        const targetInput = document.getElementById("target").value;
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
 
-        // Parse the input values
-        const source = parseCoordinates(sourceInput);
-        const target = parseCoordinates(targetInput);
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const user_location = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                };
 
-        if (!source || !target) {
-          alert("Please enter valid coordinates for both source and target.");
-          return;
+                try {
+                    const response = await fetch("http://127.0.0.1:5000/roundtrip", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ user_location, distance }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch round trip");
+                    }
+
+                    const { path, distance: actual_distance } = await response.json();
+                    drawRoute(path);
+                    document.getElementById("distance").textContent = `Distance: ${actual_distance.toFixed(2)} km`;
+                } catch (error) {
+                    console.error("Error:", error);
+                    alert("Error fetching the round trip.");
+                }
+            });
         }
 
-        // Add source and target markers to the map
-        if (sourceMarker) {
-          map.removeLayer(sourceMarker);
+        function drawRoute(path) {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            const latLngs = path.map(coord => [coord[0], coord[1]]);
+            map.fitBounds(latLngs);
+
+            latLngs.forEach((coord, index) => {
+                const marker = L.marker(coord).addTo(map).bindPopup(`Point ${index + 1}: ${coord[0]}, ${coord[1]}`);
+                markers.push(marker);
+            });
+            displayCoordinates(latLngs);
         }
-        if (targetMarker) {
-          map.removeLayer(targetMarker);
+
+        function displayCoordinates(latLngs) {
+            const coordinatesDiv = document.getElementById("coordinates");
+            coordinatesDiv.innerHTML = latLngs
+                .map((coord, index) => `Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
+                .join("<br>");
         }
-        sourceMarker = L.marker(source)
-          .addTo(map)
-          .bindPopup("Source")
-          .openPopup();
-        targetMarker = L.marker(target)
-          .addTo(map)
-          .bindPopup("Target")
-          .openPopup();
-
-        try {
-          const response = await fetch("http://127.0.0.1:5000/route", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ source, target }),
-          });
-
-          if (!response.ok) {
-            throw new Error("Failed to fetch route");
-          }
-
-          const { path, distance } = await response.json();
-          drawRoute(path);
-
-          // Display the distance returned from the backend
-          document.getElementById("distance").textContent = `Distance: ${distance.toFixed(2)} km`;
-        } catch (error) {
-          console.error("Error:", error);
-          alert("Error fetching the route.");
-        }
-      }
-
-      // Function to parse input coordinates
-      function parseCoordinates(input) {
-        const parts = input.split(",");
-        if (parts.length !== 2) return null;
-
-        const lat = parseFloat(parts[0].trim());
-        const lng = parseFloat(parts[1].trim());
-
-        if (isNaN(lat) || isNaN(lng)) return null;
-
-        return [lat, lng];
-      }
-
-      // Function to draw the route on the map with markers only and display the distance
-      function drawRoute(path) {
-        // Clear existing markers
-        markers.forEach((marker) => map.removeLayer(marker));
-        markers = [];
-
-        // Display all coordinates in the path
-        displayCoordinates(path);
-
-        const latLngs = path.map((coord) => [coord[0], coord[1]]);
-        map.fitBounds(latLngs);
-
-        // Place a marker at each coordinate
-        latLngs.forEach((coord, index) => {
-          const marker = L.marker(coord)
-            .addTo(map)
-            .bindPopup(`Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
-            .openPopup();
-          markers.push(marker);
-        });
-      }
-
-      // Function to display all coordinates in the path
-      function displayCoordinates(path) {
-        const coordinatesDiv = document.getElementById("coordinates");
-        const formattedCoordinates = path
-          .map((coord, index) => `Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
-          .join("<br>");
-        coordinatesDiv.innerHTML = `Coordinates:<br>${formattedCoordinates}`;
-      }
-
-      // Function to reset the source and target selection
-      function resetSelection() {
-        if (sourceMarker) {
-          map.removeLayer(sourceMarker);
-        }
-        if (targetMarker) {
-          map.removeLayer(targetMarker);
-        }
-        markers.forEach((marker) => map.removeLayer(marker));
-        markers = [];
-        document.getElementById("source").value = "";
-        document.getElementById("target").value = "";
-        document.getElementById("distance").textContent = "Distance: Not calculated";
-        document.getElementById("coordinates").innerHTML = "Coordinates: Not available";
-        alert("Source and target have been reset. Enter new coordinates.");
-      }
     </script>
-  </body>
+</body>
 </html>
