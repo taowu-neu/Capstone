@@ -1,4 +1,4 @@
-# a_star_algorithm.py
+# route-api/route/AStarAlgorithmn.py
 
 class AStarAlgorithm:
     def __init__(self, graph):
@@ -8,10 +8,15 @@ class AStarAlgorithm:
         """Calculates the heuristic for A* (currently a placeholder)."""
         return 0  # Implement your heuristic logic based on coordinates if needed
 
-    def calculate_path(self, start, goal):
-        open_set = {start}  # Nodes to be evaluated
-        closed_set = set()   # Nodes already evaluated
-        came_from = {}  # Records the best path
+    def calculate_constrained_path(self, start, goal, target_distance):
+        """Calculate a path from start to goal with a constrained distance range."""
+        min_distance = target_distance * 0.9
+        max_distance = target_distance * 1.1
+
+        # Initialize structures
+        open_set = {start}
+        closed_set = set()
+        came_from = {}
 
         g_score = {node: float('inf') for node in self.graph.nodes()}
         g_score[start] = 0
@@ -19,32 +24,51 @@ class AStarAlgorithm:
         f_score = {node: float('inf') for node in self.graph.nodes()}
         f_score[start] = self.heuristic(start, goal)
 
+        closest_path = None
+        closest_distance = float('inf')
+
         while open_set:
-            # Pick the node in open_set with the lowest f_score
+            # Pick the node with the lowest f_score
             current = min(open_set, key=lambda node: f_score[node])
+            current_distance = g_score[current]
 
-            # If we reach the goal, reconstruct the path
+            # Check if current path to goal meets distance constraints
             if current == goal:
-                path = []
-                while current in came_from:
-                    path.append(current)
-                    current = came_from[current]
-                path.append(start)
-                return path[::-1]  # Return the path from start to goal
+                if min_distance <= current_distance <= max_distance:
+                    path = []
+                    while current in came_from:
+                        path.append(current)
+                        current = came_from[current]
+                    path.append(start)
+                    return path[::-1]  # Return the path from start to goal
 
-            open_set.remove(current)  # Remove from open set
-            closed_set.add(current)   # Add to closed set
+                # Record the closest path if within the min_distance
+                if abs(current_distance - target_distance) < abs(closest_distance - target_distance):
+                    closest_path = []
+                    while current in came_from:
+                        closest_path.append(current)
+                        current = came_from[current]
+                    closest_path.append(start)
+                    closest_distance = current_distance
 
-            # Evaluate neighbors of the current node
+            # Remove current from open_set if it exists to prevent KeyError
+            if current in open_set:
+                open_set.remove(current)
+            closed_set.add(current)
+
+            # Evaluate neighbors
             for neighbor in self.graph.neighbors(current):
                 if neighbor in closed_set:
-                    continue  # Skip if neighbor is already evaluated
+                    continue
 
-                # Calculate tentative g_score
                 tentative_g_score = g_score[current] + self.graph[current][neighbor]['weight']
 
+                # Skip if over max_distance
+                if tentative_g_score > max_distance:
+                    continue
+
+                # Update path if better than existing
                 if tentative_g_score < g_score[neighbor]:
-                    # This path to neighbor is better
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g_score
                     f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, goal)
@@ -52,4 +76,5 @@ class AStarAlgorithm:
                     if neighbor not in open_set:
                         open_set.add(neighbor)
 
-        return None  # Return None if no path is found
+        # Return the closest path if no exact match within range
+        return closest_path if closest_path is not None else None
