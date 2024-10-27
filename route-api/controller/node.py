@@ -36,7 +36,8 @@ def get_node_coordinates(node_ids):
     # Execute the query with the list of node IDs
     result = db.session.execute(query, {"node_ids": node_ids}).fetchall()
 
+    coordinates_dict = {row.id: (row.latitude, row.longitude) for row in result}
     # Map the result to a list of coordinate tuples [(lat, lon), ...]
-    coordinates = [(row.latitude, row.longitude) for row in result]
+    coordinates = [coordinates_dict[node_id] for node_id in node_ids if node_id in coordinates_dict]
     
     return coordinates

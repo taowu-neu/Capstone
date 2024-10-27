@@ -30,23 +30,21 @@ class AStarAlgorithm:
                     path.append(current)
                     current = came_from[current]
                 path.append(start)
-                path.reverse()
-                # Convert g_score of the goal from meters to kilometers
-                distance_in_km = g_score[goal] / 1000
-                return path, distance_in_km
+                return path[::-1]  # Return the path from start to goal
 
-            open_set.remove(current)
-            closed_set.add(current)
+            open_set.remove(current)  # Remove from open set
+            closed_set.add(current)   # Add to closed set
 
             # Evaluate neighbors of the current node
             for neighbor in self.graph.neighbors(current):
                 if neighbor in closed_set:
-                    continue
+                    continue  # Skip if neighbor is already evaluated
 
                 # Calculate tentative g_score
                 tentative_g_score = g_score[current] + self.graph[current][neighbor]['weight']
 
                 if tentative_g_score < g_score[neighbor]:
+                    # This path to neighbor is better
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g_score
                     f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, goal)
@@ -54,4 +52,4 @@ class AStarAlgorithm:
                     if neighbor not in open_set:
                         open_set.add(neighbor)
 
-        return None, None  # Return None if no path is found
+        return None  # Return None if no path is found

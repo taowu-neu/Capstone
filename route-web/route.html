@@ -1,96 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Map Round Trip Visualization</title>
+    <title>Map Route Visualization</title>
+
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        #map { height: 60vh; }
-        .controls { margin: 10px; }
-        input { padding: 5px; margin-right: 10px; }
-        button { padding: 10px 20px; margin-top: 10px; }
-        #distance { margin-top: 10px; font-size: 16px; }
-        #coordinates { margin-top: 10px; font-size: 14px; max-height: 200px; overflow-y: auto; background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd; }
+      #map {
+        height: 80vh;
+      }
+      .controls {
+        margin: 10px;
+      }
+      button {
+        padding: 10px 20px;
+        margin-top: 10px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="controls">
-        <input type="number" id="distanceInput" placeholder="Enter distance in km" />
-        <button onclick="generateRoundTrip()">Generate Round Trip</button>
-        <div id="distance">Distance: Not calculated</div>
-        <div id="coordinates">Coordinates: Not available</div>
+      <button onclick="calculateRoute()">Get Route</button>
+      <div id="distanceDisplay" style="margin-top: 10px;">Distance: N/A</div>
     </div>
     <div id="map"></div>
+
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
     <script>
-        const map = L.map("map").setView([49.174, -123.184], 15);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }).addTo(map);
-        let markers = [];
+      const map = L.map("map").setView([49.174, -123.184], 15); // Initialize map
 
-        async function generateRoundTrip() {
-            const distanceInput = document.getElementById("distanceInput").value;
-            const distance = parseFloat(distanceInput);
+      // Add OpenStreetMap tiles
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
 
-            if (!distance || distance <= 0) {
-                alert("Please enter a valid distance.");
-                return;
-            }
+      let source = [49.2292, -122.9932]; // Store source coordinates
+      let target = [49.2813912, -123.1217871]; // Store target coordinates
+      let sourceMarker, targetMarker; // Markers for source and target
 
-            if (!navigator.geolocation) {
-                alert("Geolocation is not supported by your browser.");
-                return;
-            }
+      // Function to handle map clicks
+      map.on("click", function (e) {
+        const { lat, lng } = e.latlng;
 
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const user_location = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                };
+        if (!source) {
+          sourceMarker = L.marker(source)
+            .addTo(map)
+            .bindPopup("Source")
+            .openPopup();
+        } else if (!target) {
+          targetMarker = L.marker([lat, lng])
+            .addTo(map)
+            .bindPopup("Target")
+            .openPopup();
+        } else {
+          alert("Both source and target are already set.");
+        }
+      });
 
-                try {
-                    const response = await fetch("http://127.0.0.1:5000/roundtrip", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ user_location, distance }),
-                    });
-
-                    if (!response.ok) {
-                        throw new Error("Failed to fetch round trip");
-                    }
-
-                    const { path, distance: actual_distance } = await response.json();
-                    drawRoute(path);
-                    document.getElementById("distance").textContent = `Distance: ${actual_distance.toFixed(2)} km`;
-                } catch (error) {
-                    console.error("Error:", error);
-                    alert("Error fetching the round trip.");
-                }
-            });
+      // Function to calculate the route
+      async function calculateRoute() {
+        if (!source || !target) {
+          alert("Please select both source and target points on the map.");
+          return;
         }
 
-        function drawRoute(path) {
-            markers.forEach(marker => map.removeLayer(marker));
-            markers = [];
+        try {
+          const response = await fetch("http://127.0.0.1:5000/route", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ source, target }),
+          });
 
-            const latLngs = path.map(coord => [coord[0], coord[1]]);
-            map.fitBounds(latLngs);
+          if (!response.ok) {
+            throw new Error("Failed to fetch route");
+          }
 
-            latLngs.forEach((coord, index) => {
-                const marker = L.marker(coord).addTo(map).bindPopup(`Point ${index + 1}: ${coord[0]}, ${coord[1]}`);
-                markers.push(marker);
-            });
-            displayCoordinates(latLngs);
+          const { path, distance } = await response.json();
+          drawRoute(path);
+
+          // Update distance display
+          document.getElementById("distanceDisplay").innerText = `Distance: ${distance} km`;
+        } catch (error) {
+          console.error("Error:", error);
+          alert("Error fetching the route.");
         }
+      }
 
-        function displayCoordinates(latLngs) {
-            const coordinatesDiv = document.getElementById("coordinates");
-            coordinatesDiv.innerHTML = latLngs
-                .map((coord, index) => `Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
-                .join("<br>");
-        }
+      // Function to draw the route on the map
+      function drawRoute(path) {
+        const latLngs = path.map((coord) => [coord[0], coord[1]]); // Convert to [lat, lng]
+        map.fitBounds(L.polyline(latLngs).getBounds());
+
+        const polyline = L.polyline(latLngs, { color: 'blue', weight: 5 }).addTo(map);
+        // Place a marker at each coordinate
+        // latLngs.forEach((coord, index) => {
+        //   L.marker(coord)
+        //     .addTo(map)
+        //     .bindPopup(`Point ${index + 1}: ${coord[0]}, ${coord[1]}`)
+        //     .openPopup();
+        // });
+      }
     </script>
-</body>
+  </body>
 </html>
