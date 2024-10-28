@@ -47,7 +47,7 @@ class BiDirectionalAStar:
                 other_distance, other_path = other_visited[current_node]
                 total_distance = current_distance + other_distance
                 if min_distance <= total_distance <= max_distance:
-                    full_path = path + other_path[::-1] if direction == 'forward' else other_path[::-1] + path
+                    full_path = path + other_path if direction == 'forward' else other_path + path
                     if abs(total_distance - target_distance) < abs(closest_distance - target_distance):
                         best_path = full_path
                         closest_distance = total_distance

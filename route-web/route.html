@@ -105,18 +105,14 @@
         pathLayers = []; // Clear the array
 
         // Draw new paths and store each layer in pathLayers
-        pathSegments.forEach(segment => {
-            const latLngs = segment.map(coord => [coord[0], coord[1]]); // Convert to [lat, lng]
-            const polyline = L.polyline(latLngs, { color: 'blue', weight: 5 }).addTo(map);
-            pathLayers.push(polyline); // Store the new path layer
-        });
+        // pathSegments.forEach(segment => {
+        //     const latLngs = segment.map(coord => [coord[0], coord[1]]); // Convert to [lat, lng]
+        //     pathLayers.push(polyline); // Store the new path layer
+        //   });
+        const polyline = L.polyline(pathSegments, { color: 'blue', weight: 5 }).addTo(map);
 
-        // Fit map bounds to the last segment
-        if (pathSegments.length > 0) {
-            const lastSegment = pathSegments[pathSegments.length - 1];
-            const latLngs = lastSegment.map(coord => [coord[0], coord[1]]);
-            map.fitBounds(L.polyline(latLngs).getBounds());
-        }
+        // Optional: Fit the map view to the polyline's bounds
+        map.fitBounds(polyline.getBounds());
     }
 </script>
 </body>
