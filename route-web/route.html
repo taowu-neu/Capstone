@@ -42,6 +42,7 @@
     let source = [49.2292, -122.9932]; // Store source coordinates
     let target = [49.2813912, -123.1217871]; // Store target coordinates
     let sourceMarker, targetMarker; // Markers for source and target
+    let pathLayers = []; // Array to store current path layers
 
     // Function to handle map clicks
     map.on("click", function (e) {
@@ -86,8 +87,8 @@
                 throw new Error("Failed to fetch route");
             }
 
-            const { path, distance } = await response.json();
-            drawRoute(path);
+            const { path_segments, distance } = await response.json();
+            drawRoute(path_segments);
 
             // Update distance display
             document.getElementById("distanceDisplay").innerText = `Distance: ${distance} km`;
@@ -98,11 +99,24 @@
     }
 
     // Function to draw the route on the map
-    function drawRoute(path) {
-        const latLngs = path.map((coord) => [coord[0], coord[1]]); // Convert to [lat, lng]
-        map.fitBounds(L.polyline(latLngs).getBounds());
+    function drawRoute(pathSegments) {
+        // Remove old paths
+        pathLayers.forEach(layer => map.removeLayer(layer));
+        pathLayers = []; // Clear the array
 
-        const polyline = L.polyline(latLngs, { color: 'blue', weight: 5 }).addTo(map);
+        // Draw new paths and store each layer in pathLayers
+        pathSegments.forEach(segment => {
+            const latLngs = segment.map(coord => [coord[0], coord[1]]); // Convert to [lat, lng]
+            const polyline = L.polyline(latLngs, { color: 'blue', weight: 5 }).addTo(map);
+            pathLayers.push(polyline); // Store the new path layer
+        });
+
+        // Fit map bounds to the last segment
+        if (pathSegments.length > 0) {
+            const lastSegment = pathSegments[pathSegments.length - 1];
+            const latLngs = lastSegment.map(coord => [coord[0], coord[1]]);
+            map.fitBounds(L.polyline(latLngs).getBounds());
+        }
     }
 </script>
 </body>

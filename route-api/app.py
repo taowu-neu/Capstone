@@ -39,23 +39,41 @@ def get_route():
     finder = BiDirectionalAStar(graph)
     route = finder.find_path_within_distance(source_node.id, target_node.id, input_distance * 1000)  # Convert km to meters
 
-    # If route is found, return the path and distance
     if route:
-        path = get_node_coordinates(route)
+        path_segments = []
+        current_segment = []
         total_distance = 0.0
 
-        # Calculate total distance, with edge existence check
+        # 遍历路径中的节点并检查边是否存在
         for i in range(len(route) - 1):
             if graph.has_edge(route[i], route[i + 1]):
+                # 如果边存在，将该节点加入当前段
+                if not current_segment:
+                    current_segment.append(route[i])  # 添加段的起始节点
+                current_segment.append(route[i + 1])
+
+                # 计算距离
                 edge = graph[route[i]][route[i + 1]]
                 total_distance += edge['weight']
             else:
                 print(f"Warning: Missing edge between {route[i]} and {route[i + 1]}")
-                # Skip this segment if the edge does not exist
-                continue
+                # 将当前段加入段列表，并清空当前段
+                if current_segment:
+                    path_segments.append(current_segment)
+                    current_segment = []
 
-        total_distance_km = total_distance / 1000  # Convert meters to kilometers
-        return jsonify({"path": path, "distance": round(total_distance_km, 2)})
+        # 如果有未添加的最后一段，添加到段列表
+        if current_segment:
+            path_segments.append(current_segment)
+
+        # 将每段的坐标转化为经纬度形式
+        path_coordinates = []
+        for segment in path_segments:
+            path_coordinates.append(get_node_coordinates(segment))
+
+        # 将路径总距离转换为公里
+        total_distance_km = total_distance / 1000
+        return jsonify({"path_segments": path_coordinates, "distance": round(total_distance_km, 2)})
     else:
         return jsonify({"message": "No path found within the specified distance range"}), 404
 
