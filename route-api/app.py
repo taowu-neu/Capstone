@@ -14,12 +14,6 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-with app.app_context():
-    CORS(app)
-    db.init_app(app)
-    graph = build_graph()
-    print('build graph complete...', graph)
-
 @app.route('/')
 def home():
     return jsonify(message="Welcome to my Flask app!")
@@ -74,4 +68,8 @@ def get_edges():
     return edges
 
 if __name__ == '__main__':
-    app.run(debug=True)
+  with app.app_context():
+      CORS(app)
+      db.init_app(app)
+      graph = build_graph()
+  app.run(debug=True)

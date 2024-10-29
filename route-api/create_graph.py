@@ -1,12 +1,23 @@
 import networkx as nx
+import joblib
+import os
 from model.models import Edge, Node
 from database.db import db
 from sqlalchemy.orm import aliased
 from sqlalchemy import func
 from sqlalchemy import text
 
+cache_directory = 'cache'
+cache_graph_path = os.path.join(cache_directory, 'graph_cache.pkl')
+
 def build_graph():
-    # Create a directed graph
+    # Load cached graph
+    if os.path.exists(cache_graph_path):
+        cached_graph = joblib.load(cache_graph_path)
+        print("load cached graph complete.")
+        return cached_graph
+  
+    # Create a new graph
     graph = nx.Graph()
     
     # Query all edges from the database
@@ -15,7 +26,10 @@ def build_graph():
     # Add edges to the graph
     for edge in edges:
         graph.add_edge(edge.source, edge.target, weight=edge.length)
-    
+    # Cache the graph
+    os.makedirs(cache_directory, exist_ok=True)
+    joblib.dump(graph, cache_graph_path)
+    print('build graph complete...', graph)
     return graph
 
 
