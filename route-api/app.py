@@ -40,36 +40,34 @@ def get_route():
 
     node_details = get_all_node_details()
     finder = BiDirectionalAStar(graph, node_details)
+
+    # Generate paths within the specified distance range
+    all_paths = finder.find_paths_within_distance(source_node.id, target_node.id, input_distance)
     
     paths = []
-    distance_step = (input_distance * 1.15 - input_distance * 0.85) / 29  # Divide range into 30 steps
+    for route, total_distance in all_paths:
+        elevation_change, poi_count = 0.0, 0
+        path_coordinates = [(node_details[node_id]['latitude'], node_details[node_id]['longitude']) for node_id in route]
 
-    for i in range(30):
-        target_dist = input_distance * 0.85 + i * distance_step
-        route = finder.find_path_within_distance(source_node.id, target_node.id, target_dist)
+        for j in range(len(route) - 1):
+            node_id, next_node_id = route[j], route[j + 1]
+            elevation_diff = abs(node_details[next_node_id]['elevation'] - node_details[node_id]['elevation'])
+            elevation_change += elevation_diff
+            if node_details[node_id]['is_poi']:
+                poi_count += 1
         
-        if route:
-            total_distance, elevation_change, poi_count = 0.0, 0.0, 0
-            path_coordinates = [(node_details[node_id]['latitude'], node_details[node_id]['longitude']) for node_id in route]
-
-            for j in range(len(route) - 1):
-                node_id, next_node_id = route[j], route[j + 1]
-                elevation_diff = abs(node_details[next_node_id]['elevation'] - node_details[node_id]['elevation'])
-                elevation_change += elevation_diff
-                if node_details[node_id]['is_poi']:
-                    poi_count += 1
-                if graph.has_edge(node_id, next_node_id):
-                    total_distance += graph[node_id][next_node_id]['weight']
-            
-            paths.append({
-                "path_segments": path_coordinates,
-                "distance": round(total_distance / 1000, 2),  # Convert meters to km
-                "elevation_change": round(elevation_change, 2),
-                "poi_count": poi_count
-            })
-            print(f"Path {i+1}: Distance {total_distance / 1000} km, Elevation Change {elevation_change} m, POI Count {poi_count}")
+        paths.append({
+            "path_segments": path_coordinates,
+            "distance": round(total_distance / 1000, 2),  # Convert meters to km
+            "elevation_change": round(elevation_change, 2),
+            "poi_count": poi_count
+        })
+        print(f"Path: Distance {total_distance / 1000} km, Elevation Change {elevation_change} m, POI Count {poi_count}")
     
-    return jsonify(paths)
+    # Find the path with the maximum elevation change
+    max_elevation_path = max(paths, key=lambda x: x["elevation_change"])
+    
+    return jsonify({"paths": paths, "max_elevation_path": max_elevation_path})
 
 if __name__ == '__main__':
     with app.app_context():

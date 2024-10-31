@@ -6,16 +6,9 @@
     <title>Map Route Visualization</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        #map {
-            height: 80vh;
-        }
-        .controls {
-            margin: 10px;
-        }
-        button {
-            padding: 10px 20px;
-            margin-top: 10px;
-        }
+        #map { height: 80vh; }
+        .controls { margin: 10px; }
+        button { padding: 10px 20px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -38,15 +31,9 @@
 
     let source = [49.2292, -122.9932];
     let target = [49.2813912, -123.1217871];
-    let sourceMarker, targetMarker;
     let pathLayer;
 
     async function calculateRoute() {
-        if (!source || !target) {
-            alert("Please select both source and target points on the map.");
-            return;
-        }
-
         const inputDistance = parseFloat(document.getElementById("distanceInput").value);
         if (isNaN(inputDistance) || inputDistance <= 0) {
             alert("Please enter a valid distance in km.");
@@ -62,24 +49,16 @@
 
             if (!response.ok) throw new Error("Failed to fetch route");
 
-            const paths = await response.json();
-            let pathIndex = 0;
+            const data = await response.json();
+            const maxElevationPath = data.max_elevation_path;
 
-            function displayPath() {
-                const path = paths[pathIndex];
-                if (pathLayer) map.removeLayer(pathLayer);
-                pathLayer = L.polyline(path.path_segments, { color: 'blue', weight: 5 }).addTo(map);
-                map.fitBounds(pathLayer.getBounds());
+            if (pathLayer) map.removeLayer(pathLayer);
+            pathLayer = L.polyline(maxElevationPath.path_segments, { color: 'blue', weight: 5 }).addTo(map);
+            map.fitBounds(pathLayer.getBounds());
 
-                document.getElementById("distanceDisplay").innerText = `Distance: ${path.distance} km`;
-                document.getElementById("elevationDisplay").innerText = `Elevation Change: ${path.elevation_change} m`;
-                document.getElementById("poiDisplay").innerText = `POI Count: ${path.poi_count}`;
-
-                pathIndex = (pathIndex + 1) % paths.length;
-                setTimeout(displayPath, 2000);  // Cycle paths every 2 seconds
-            }
-
-            displayPath();
+            document.getElementById("distanceDisplay").innerText = `Distance: ${maxElevationPath.distance} km`;
+            document.getElementById("elevationDisplay").innerText = `Elevation Change: ${maxElevationPath.elevation_change} m`;
+            document.getElementById("poiDisplay").innerText = `POI Count: ${maxElevationPath.poi_count}`;
 
         } catch (error) {
             console.error("Error:", error);

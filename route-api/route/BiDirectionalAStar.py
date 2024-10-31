@@ -1,25 +1,24 @@
 import heapq
 from math import sqrt
-from functools import lru_cache
 
 class BiDirectionalAStar:
     def __init__(self, graph, node_details):
         self.graph = graph
-        self.node_details = node_details  # Cached node details in memory
+        self.node_details = node_details
 
     def heuristic(self, node, goal):
         """Optimized Euclidean distance heuristic with a weight factor."""
-        weight_factor = 1.1  # Adjust this factor for tuning
+        weight_factor = 1.1
         node_data, goal_data = self.node_details[node], self.node_details[goal]
         
         dx = node_data['longitude'] - goal_data['longitude']
         dy = node_data['latitude'] - goal_data['latitude']
         euclidean_distance = sqrt(dx ** 2 + dy ** 2)
         
-        return weight_factor * euclidean_distance  # Return weighted Euclidean distance
+        return weight_factor * euclidean_distance
 
-    def find_path_within_distance(self, start, goal, target_distance):
-        """Find a path from start to goal as close as possible to the target distance."""
+    def find_paths_within_distance(self, start, goal, target_distance):
+        """Find paths from start to goal within the target distance range."""
         
         min_distance = target_distance * 0.85
         max_distance = target_distance * 1.15
@@ -33,11 +32,9 @@ class BiDirectionalAStar:
         forward_visited = {start: (0, [start])}
         backward_visited = {goal: (0, [goal])}
 
-        best_path = None
-        closest_distance = float('inf')
+        valid_paths = []
 
         def expand_search(queue, visited, other_visited, direction):
-            nonlocal best_path, closest_distance
             if not queue:
                 return None
 
@@ -48,9 +45,7 @@ class BiDirectionalAStar:
                 total_distance = current_distance + other_distance
                 if min_distance <= total_distance <= max_distance:
                     full_path = path + other_path if direction == 'forward' else other_path + path
-                    if abs(total_distance - target_distance) < abs(closest_distance - target_distance):
-                        best_path = full_path
-                        closest_distance = total_distance
+                    valid_paths.append((full_path, total_distance))
                 return
 
             for neighbor in self.graph.neighbors(current_node):
@@ -70,4 +65,4 @@ class BiDirectionalAStar:
             expand_search(forward_open_set, forward_visited, backward_visited, 'forward')
             expand_search(backward_open_set, backward_visited, forward_visited, 'backward')
 
-        return best_path if best_path is not None else None
+        return valid_paths
