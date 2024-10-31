@@ -2,20 +2,42 @@ import heapq
 from math import sqrt
 
 class BiDirectionalAStar:
-    def __init__(self, graph, node_details):
+    def __init__(self, graph, node_details, elevation_pref="max", poi_pref="max"):
         self.graph = graph
         self.node_details = node_details
+        self.elevation_pref = elevation_pref
+        self.poi_pref = poi_pref
 
     def heuristic(self, node, goal):
-        """Optimized Euclidean distance heuristic with a weight factor."""
-        weight_factor = 1.1
+        """Heuristic that considers weighted distance, elevation, and POI difference based on user preference."""
+        # Base weight for distance is always included
+        weight_factor_distance = 0.5
+
+        # Adjust weights based on user preferences for elevation and POI
+        weight_factor_elevation = 0.3 if self.elevation_pref == "max" else 0.2
+        weight_factor_poi = 0.2 if self.poi_pref == "max" else 0.1
+
         node_data, goal_data = self.node_details[node], self.node_details[goal]
-        
+
+        # Calculate Euclidean distance
         dx = node_data['longitude'] - goal_data['longitude']
         dy = node_data['latitude'] - goal_data['latitude']
         euclidean_distance = sqrt(dx ** 2 + dy ** 2)
-        
-        return weight_factor * euclidean_distance
+
+        # Calculate elevation difference
+        elevation_diff = abs(node_data['elevation'] - goal_data['elevation'])
+
+        # Handle None for is_poi: if None, treat as 0 (no POI)
+        node_is_poi = node_data['is_poi'] if node_data['is_poi'] is not None else 0
+        goal_is_poi = goal_data['is_poi'] if goal_data['is_poi'] is not None else 0
+        poi_diff = abs(node_is_poi - goal_is_poi)
+
+        # Weighted heuristic sum
+        return (
+            weight_factor_distance * euclidean_distance +
+            weight_factor_elevation * elevation_diff +
+            weight_factor_poi * poi_diff
+        )
 
     def find_paths_within_distance(self, start, goal, target_distance):
         """Find paths from start to goal within the target distance range."""

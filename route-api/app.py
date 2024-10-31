@@ -41,7 +41,7 @@ def get_route():
     target_node = find_closest_node(target[1], target[0])
 
     node_details = get_all_node_details()
-    finder = BiDirectionalAStar(graph, node_details)
+    finder = BiDirectionalAStar(graph, node_details, elevation_pref=elevation_pref, poi_pref=poi_pref)
 
     # Generate paths within the specified distance range
     all_paths = finder.find_paths_within_distance(source_node.id, target_node.id, input_distance)
