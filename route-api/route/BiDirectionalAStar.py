@@ -9,20 +9,12 @@ class BiDirectionalAStar:
         self.poi_pref = poi_pref
 
     def heuristic(self, node, goal):
-        """Heuristic that considers weighted distance, elevation, and POI difference based on user preference."""
-        # Base weight for distance is always included
-        weight_factor_distance = 0.5
-
+        """Heuristic that considers only elevation and POI difference based on user preference."""
         # Adjust weights based on user preferences for elevation and POI
-        weight_factor_elevation = 0.3 if self.elevation_pref == "max" else 0.2
-        weight_factor_poi = 0.2 if self.poi_pref == "max" else 0.1
+        weight_factor_elevation = 0.6 if self.elevation_pref == "max" else 0.4
+        weight_factor_poi = 0.4 if self.poi_pref == "max" else 0.2
 
         node_data, goal_data = self.node_details[node], self.node_details[goal]
-
-        # Calculate Euclidean distance
-        dx = node_data['longitude'] - goal_data['longitude']
-        dy = node_data['latitude'] - goal_data['latitude']
-        euclidean_distance = sqrt(dx ** 2 + dy ** 2)
 
         # Calculate elevation difference
         elevation_diff = abs(node_data['elevation'] - goal_data['elevation'])
@@ -32,9 +24,8 @@ class BiDirectionalAStar:
         goal_is_poi = goal_data['is_poi'] if goal_data['is_poi'] is not None else 0
         poi_diff = abs(node_is_poi - goal_is_poi)
 
-        # Weighted heuristic sum
+        # Weighted heuristic sum, considering only elevation and POI
         return (
-            weight_factor_distance * euclidean_distance +
             weight_factor_elevation * elevation_diff +
             weight_factor_poi * poi_diff
         )
