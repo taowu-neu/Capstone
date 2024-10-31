@@ -14,6 +14,20 @@
 <body>
 <div class="controls">
     <input type="number" id="distanceInput" placeholder="Input Distance (km)" />
+
+    <!-- Elevation and POI preference selection -->
+    <label for="elevationSelect">Elevation:</label>
+    <select id="elevationSelect">
+        <option value="max">Max</option>
+        <option value="min">Min</option>
+    </select>
+    
+    <label for="poiSelect">POI:</label>
+    <select id="poiSelect">
+        <option value="max">Max</option>
+        <option value="min">Min</option>
+    </select>
+
     <button onclick="calculateRoute()">Get Route</button>
     <div id="distanceDisplay" style="margin-top: 10px;">Distance: N/A</div>
     <div id="elevationDisplay" style="margin-top: 10px;">Elevation Change: N/A</div>
@@ -35,6 +49,9 @@
 
     async function calculateRoute() {
         const inputDistance = parseFloat(document.getElementById("distanceInput").value);
+        const elevation = document.getElementById("elevationSelect").value;
+        const poi = document.getElementById("poiSelect").value;
+
         if (isNaN(inputDistance) || inputDistance <= 0) {
             alert("Please enter a valid distance in km.");
             return;
@@ -44,21 +61,21 @@
             const response = await fetch("http://127.0.0.1:5000/route", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ source, target, input_distance: inputDistance }),
+                body: JSON.stringify({ source, target, input_distance: inputDistance, elevation, poi }),
             });
 
             if (!response.ok) throw new Error("Failed to fetch route");
 
             const data = await response.json();
-            const maxElevationPath = data.max_elevation_path;
+            const bestPath = data.best_path;
 
             if (pathLayer) map.removeLayer(pathLayer);
-            pathLayer = L.polyline(maxElevationPath.path_segments, { color: 'blue', weight: 5 }).addTo(map);
+            pathLayer = L.polyline(bestPath.path_segments, { color: 'blue', weight: 5 }).addTo(map);
             map.fitBounds(pathLayer.getBounds());
 
-            document.getElementById("distanceDisplay").innerText = `Distance: ${maxElevationPath.distance} km`;
-            document.getElementById("elevationDisplay").innerText = `Elevation Change: ${maxElevationPath.elevation_change} m`;
-            document.getElementById("poiDisplay").innerText = `POI Count: ${maxElevationPath.poi_count}`;
+            document.getElementById("distanceDisplay").innerText = `Distance: ${bestPath.distance} km`;
+            document.getElementById("elevationDisplay").innerText = `Elevation Change: ${bestPath.elevation_change} m`;
+            document.getElementById("poiDisplay").innerText = `POI Count: ${bestPath.poi_count}`;
 
         } catch (error) {
             console.error("Error:", error);

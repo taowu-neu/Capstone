@@ -34,6 +34,8 @@ def get_route():
     source = data.get('source')
     target = data.get('target')
     input_distance = data.get('input_distance') * 1000  # Convert km to meters
+    elevation_pref = data.get('elevation')
+    poi_pref = data.get('poi')
 
     source_node = find_closest_node(source[1], source[0])
     target_node = find_closest_node(target[1], target[0])
@@ -58,16 +60,35 @@ def get_route():
         
         paths.append({
             "path_segments": path_coordinates,
-            "distance": round(total_distance / 1000, 2),  # Convert meters to km
+            "distance": round(total_distance / 1000, 2),
             "elevation_change": round(elevation_change, 2),
             "poi_count": poi_count
         })
-        print(f"Path: Distance {total_distance / 1000} km, Elevation Change {elevation_change} m, POI Count {poi_count}")
     
-    # Find the path with the maximum elevation change
-    max_elevation_path = max(paths, key=lambda x: x["elevation_change"])
+    # Normalize scores based on preferences
+    elevation_changes = [path["elevation_change"] for path in paths]
+    poi_counts = [path["poi_count"] for path in paths]
+    min_elev, max_elev = min(elevation_changes), max(elevation_changes)
+    min_poi, max_poi = min(poi_counts), max(poi_counts)
+
+    def calculate_score(path):
+        if elevation_pref == "max":
+            elevation_score = (path["elevation_change"] - min_elev) / (max_elev - min_elev) if max_elev > min_elev else 0
+        else:
+            elevation_score = (max_elev - path["elevation_change"]) / (max_elev - min_elev) if max_elev > min_elev else 0
+
+        if poi_pref == "max":
+            poi_score = (path["poi_count"] - min_poi) / (max_poi - min_poi) if max_poi > min_poi else 0
+        else:
+            poi_score = (max_poi - path["poi_count"]) / (max_poi - min_poi) if max_poi > min_poi else 0
+
+        # Weighted sum for multi-objective score
+        return 0.5 * elevation_score + 0.5 * poi_score
+
+    # Get the best path based on the calculated scores
+    best_path = max(paths, key=calculate_score)
     
-    return jsonify({"paths": paths, "max_elevation_path": max_elevation_path})
+    return jsonify({"paths": paths, "best_path": best_path})
 
 if __name__ == '__main__':
     with app.app_context():
