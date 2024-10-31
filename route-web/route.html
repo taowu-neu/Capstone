@@ -32,7 +32,6 @@
 
 <script>
     const map = L.map("map").setView([49.174, -123.184], 15);
-
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
@@ -40,25 +39,7 @@
     let source = [49.2292, -122.9932];
     let target = [49.2813912, -123.1217871];
     let sourceMarker, targetMarker;
-    let pathLayers = [];
-
-    map.on("click", function (e) {
-        const { lat, lng } = e.latlng;
-
-        if (!source) {
-            sourceMarker = L.marker(source)
-                .addTo(map)
-                .bindPopup("Source")
-                .openPopup();
-        } else if (!target) {
-            targetMarker = L.marker([lat, lng])
-                .addTo(map)
-                .bindPopup("Target")
-                .openPopup();
-        } else {
-            alert("Both source and target are already set.");
-        }
-    });
+    let pathLayer;
 
     async function calculateRoute() {
         if (!source || !target) {
@@ -79,28 +60,31 @@
                 body: JSON.stringify({ source, target, input_distance: inputDistance }),
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to fetch route");
+            if (!response.ok) throw new Error("Failed to fetch route");
+
+            const paths = await response.json();
+            let pathIndex = 0;
+
+            function displayPath() {
+                const path = paths[pathIndex];
+                if (pathLayer) map.removeLayer(pathLayer);
+                pathLayer = L.polyline(path.path_segments, { color: 'blue', weight: 5 }).addTo(map);
+                map.fitBounds(pathLayer.getBounds());
+
+                document.getElementById("distanceDisplay").innerText = `Distance: ${path.distance} km`;
+                document.getElementById("elevationDisplay").innerText = `Elevation Change: ${path.elevation_change} m`;
+                document.getElementById("poiDisplay").innerText = `POI Count: ${path.poi_count}`;
+
+                pathIndex = (pathIndex + 1) % paths.length;
+                setTimeout(displayPath, 2000);  // Cycle paths every 2 seconds
             }
 
-            const { path_segments, distance, elevation_change, poi_count } = await response.json();
-            drawRoute(path_segments);
+            displayPath();
 
-            document.getElementById("distanceDisplay").innerText = `Distance: ${distance} km`;
-            document.getElementById("elevationDisplay").innerText = `Elevation Change: ${elevation_change} m`;
-            document.getElementById("poiDisplay").innerText = `POI Count: ${poi_count}`;
         } catch (error) {
             console.error("Error:", error);
             alert("Error fetching the route.");
         }
-    }
-
-    function drawRoute(pathSegments) {
-        pathLayers.forEach(layer => map.removeLayer(layer));
-        pathLayers = [];
-
-        const polyline = L.polyline(pathSegments, { color: 'blue', weight: 5 }).addTo(map);
-        map.fitBounds(polyline.getBounds());
     }
 </script>
 </body>
