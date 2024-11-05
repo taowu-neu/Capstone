@@ -8,26 +8,24 @@ class BiDirectionalAStar:
         self.elevation_pref = elevation_pref
         self.poi_pref = poi_pref
 
-    def heuristic(self, node, goal):
-        """Heuristic that considers only elevation and POI difference based on user preference."""
+    def heuristic(self, node, neighbor):
+        """Heuristic that considers only elevation difference and POI status between the current node and its neighbor."""
         # Adjust weights based on user preferences for elevation and POI
         weight_factor_elevation = 0.6 if self.elevation_pref == "max" else 0.4
-        weight_factor_poi = 0.4 if self.poi_pref == "max" else 0.2
+        weight_factor_poi = 0.6 if self.poi_pref == "max" else 0.4
 
-        node_data, goal_data = self.node_details[node], self.node_details[goal]
+        node_data, neighbor_data = self.node_details[node], self.node_details[neighbor]
 
-        # Calculate elevation difference
-        elevation_diff = abs(node_data['elevation'] - goal_data['elevation'])
+        # Calculate elevation difference between current node and neighbor
+        elevation_diff = abs(node_data['elevation'] - neighbor_data['elevation'])
 
-        # Handle None for is_poi: if None, treat as 0 (no POI)
-        node_is_poi = node_data['is_poi'] if node_data['is_poi'] is not None else 0
-        goal_is_poi = goal_data['is_poi'] if goal_data['is_poi'] is not None else 0
-        poi_diff = abs(node_is_poi - goal_is_poi)
+        # Check if the neighbor is a POI: treat POI as 1, non-POI as 0
+        neighbor_is_poi = 1 if neighbor_data['is_poi'] else 0
 
-        # Weighted heuristic sum, considering only elevation and POI
+        # Weighted heuristic sum, considering elevation difference and POI status
         return (
             weight_factor_elevation * elevation_diff +
-            weight_factor_poi * poi_diff
+            weight_factor_poi * neighbor_is_poi
         )
 
     def find_paths_within_distance(self, start, goal, target_distance):
@@ -68,7 +66,8 @@ class BiDirectionalAStar:
                 if new_distance > max_distance:
                     continue
 
-                priority = new_distance + self.heuristic(neighbor, goal if direction == 'forward' else start)
+                # Updated heuristic to consider elevation difference and POI status between current node and neighbor
+                priority = new_distance + self.heuristic(current_node, neighbor)
 
                 if neighbor not in visited or new_distance < visited[neighbor][0]:
                     visited[neighbor] = (new_distance, path + [neighbor] if direction == 'forward' else [neighbor] + path)
