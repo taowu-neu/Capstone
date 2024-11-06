@@ -17,10 +17,20 @@ import {
   Box,
 } from "@mui/material";
 import "./App.css";
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+import L from "leaflet";
 
 // Default coordinates for source and target
 const defaultSource = [49.2292, -122.9932];
 const defaultTarget = [49.2813912, -123.1217871];
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 function App() {
   const [distanceInput, setDistanceInput] = useState("");
@@ -34,6 +44,7 @@ function App() {
   const [startLng, setStartLng] = useState(defaultSource[1]);
   const [endLat, setEndLat] = useState(defaultTarget[0]);
   const [endLng, setEndLng] = useState(defaultTarget[1]);
+  const [poiNodes, setPoiNodes] = useState([]);
 
   const calculateRoute = async () => {
     const inputDistance = parseFloat(distanceInput);
@@ -58,14 +69,18 @@ function App() {
       if (!response.ok) throw new Error("Failed to fetch route");
 
       const data = await response.json();
+      if (data.message) {
+        alert(data.message);
+        return;
+      }
       const bestPath = data.best_path;
 
       setPathData(bestPath.path_segments);
       setDistance(bestPath.distance);
+      setPoiNodes(bestPath.poi_nodes);
       setElevationChange(bestPath.elevation_change);
       setPoiCount(bestPath.poi_count);
     } catch (error) {
-      console.error("Error:", error);
       alert("Error fetching the route.");
     }
   };
@@ -182,7 +197,7 @@ function App() {
       <MapContainer
         center={[49.174, -123.184]}
         zoom={13}
-        scrollWheelZoom={false}
+        scrollWheelZoom={true}
         style={{ height: "100vh", width: "100%" }}
       >
         <TileLayer
@@ -201,6 +216,15 @@ function App() {
             End Point <br /> Latitude: {endLat}, Longitude: {endLng}
           </Popup>
         </Marker>
+
+        {/* Mark POI Nodes */}
+        {poiNodes.map((poi, index) => (
+          <Marker key={index} position={[poi[0], poi[1]]}>
+            <Popup>
+              POI {index + 1} <br />
+            </Popup>
+          </Marker>
+        ))}
 
         {pathData.length > 0 && (
           <Polyline

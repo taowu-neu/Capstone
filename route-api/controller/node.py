@@ -19,7 +19,6 @@ def find_closest_node(lon: float, lat: float):
         LIMIT 1;
     """)
     result = db.session.execute(query, {"lon": lon, "lat": lat}).fetchone()
-    print('find the closest node', result)
     return Node(id=result.id, longitude=result.longitude, latitude=result.latitude)
 
 def get_node_coordinates(node_ids):
