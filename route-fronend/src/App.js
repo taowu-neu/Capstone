@@ -5,6 +5,7 @@ import {
   Polyline,
   Marker,
   Popup,
+  useMap
 } from "react-leaflet";
 import {
   TextField,
@@ -234,9 +235,23 @@ function App() {
             opacity={0.7}
           />
         )}
+         <MapCenterUpdater pathData={pathData} />
       </MapContainer>
     </div>
   );
 }
+// Component to reset the map center after route calculation
+const MapCenterUpdater = ({ pathData }) => {
+  const map = useMap();
+
+  React.useEffect(() => {
+    if (pathData.length > 0) {
+      const bounds = L.latLngBounds(pathData);
+      map.fitBounds(bounds); // Fit the map to the bounds of the path
+    }
+  }, [pathData, map]);
+
+  return null; // This component does not render anything visible
+};
 
 export default App;

@@ -42,7 +42,6 @@ def get_route():
       source_node = find_closest_node(source[1], source[0])
       target_node = find_closest_node(target[1], target[0])
 
-      print(nx.has_path(graph, source_node.id, target_node.id))
       if not nx.has_path(graph, source_node.id, target_node.id):
         return jsonify({'message': 'Node is not reachable.'})
       
