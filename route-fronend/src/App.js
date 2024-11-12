@@ -16,6 +16,9 @@ import {
   FormControl,
   Typography,
   Box,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from "@mui/material";
 import "./App.css";
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -35,8 +38,9 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function App() {
   const [distanceInput, setDistanceInput] = useState("");
-  const [elevation, setElevation] = useState("max");
-  const [poi, setPoi] = useState("max");
+  const [elevationRange, setElevationRange] = useState("0-200");
+  const [poiMin, setPoiMin] = useState(0);
+  const [priorityFactor, setPriorityFactor] = useState("elevation");
   const [distance, setDistance] = useState("N/A");
   const [elevationChange, setElevationChange] = useState("N/A");
   const [poiCount, setPoiCount] = useState("N/A");
@@ -62,18 +66,21 @@ function App() {
           source: [startLat, startLng],
           target: [endLat, endLng],
           input_distance: inputDistance,
-          elevation,
-          poi,
+          elevation_range: elevationRange,
+          poi_min: poiMin,
+          priority_factor: priorityFactor,
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to fetch route");
-
       const data = await response.json();
       if (data.message) {
+
         alert(data.message);
         return;
       }
+
+      if (!response.ok) throw new Error("Failed to fetch route");
+
       const bestPath = data.best_path;
 
       setPathData(bestPath.path_segments);
@@ -149,32 +156,52 @@ function App() {
           onChange={(e) => setDistanceInput(e.target.value)}
         />
 
-        {/* Elevation and POI Preferences */}
-        <Box display="flex" justifyContent="space-between">
-          <FormControl variant="outlined" sx={{ mb: 2 }} fullWidth>
-            <InputLabel>Elevation</InputLabel>
-            <Select
-              value={elevation}
-              onChange={(e) => setElevation(e.target.value)}
-              label="Elevation"
-            >
-              <MenuItem value="max">Max</MenuItem>
-              <MenuItem value="min">Min</MenuItem>
-            </Select>
-          </FormControl>
+        <FormControl variant="outlined" sx={{ mb: 2 }} fullWidth>
+          <InputLabel>Elevation Range</InputLabel>
+          <Select
+            value={elevationRange}
+            onChange={(e) => setElevationRange(e.target.value)}
+            label="Elevation Range"
+          >
+            <MenuItem value="0-200">0-200</MenuItem>
+            <MenuItem value="200-400">200-400</MenuItem>
+            <MenuItem value="400-600">400-600</MenuItem>
+            <MenuItem value="600-800">600-800</MenuItem>
+            <MenuItem value="800-1000">800-1000</MenuItem>
+            <MenuItem value="1000+">1000+</MenuItem>
+          </Select>
+        </FormControl>
 
-          <FormControl variant="outlined" sx={{ mb: 2 }} fullWidth>
-            <InputLabel>POI</InputLabel>
-            <Select
-              value={poi}
-              onChange={(e) => setPoi(e.target.value)}
+        <TextField
+          label="Minimum POI"
+          variant="outlined"
+          type="number"
+          fullWidth
+          value={poiMin}
+          onChange={(e) => setPoiMin(parseInt(e.target.value, 10))}
+          sx={{ mb: 2 }}
+        />
+
+        {/* Priority Factor */}
+        <FormControl component="fieldset" sx={{ mb: 2 }}>
+          <Typography>Priority Factor</Typography>
+          <RadioGroup
+            row
+            value={priorityFactor}
+            onChange={(e) => setPriorityFactor(e.target.value)}
+          >
+            <FormControlLabel
+              value="elevation"
+              control={<Radio />}
+              label="Elevation"
+            />
+            <FormControlLabel
+              value="poi"
+              control={<Radio />}
               label="POI"
-            >
-              <MenuItem value="max">Max</MenuItem>
-              <MenuItem value="min">Min</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
+            />
+          </RadioGroup>
+        </FormControl>
 
         <Button
           variant="contained"
@@ -240,6 +267,7 @@ function App() {
     </div>
   );
 }
+
 // Component to reset the map center after route calculation
 const MapCenterUpdater = ({ pathData }) => {
   const map = useMap();
@@ -255,3 +283,4 @@ const MapCenterUpdater = ({ pathData }) => {
 };
 
 export default App;
+

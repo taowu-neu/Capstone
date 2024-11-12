@@ -32,85 +32,110 @@ def get_all_node_details():
 @app.route('/route', methods=['POST'])
 def get_route():
     try:
-      data = request.get_json()
-      source = data.get('source')
-      target = data.get('target')
-      input_distance = data.get('input_distance') * 1000  # Convert km to meters
-      elevation_pref = data.get('elevation')
-      poi_pref = data.get('poi')
+        data = request.get_json()
+        source = data.get('source')
+        target = data.get('target')
+        input_distance = data.get('input_distance') * 1000  # Convert km to meters
+        elevation_range = data.get('elevation_range')
+        poi_min = data.get('poi_min')
+        priority_factor = data.get('priority_factor')
 
-      source_node = find_closest_node(source[1], source[0])
-      target_node = find_closest_node(target[1], target[0])
+        source_node = find_closest_node(source[1], source[0])
+        target_node = find_closest_node(target[1], target[0])
 
-      if not nx.has_path(graph, source_node.id, target_node.id):
-        return jsonify({'message': 'Node is not reachable.'})
-      
-      shortest_distance = nx.dijkstra_path_length(graph, source_node.id, target_node.id, weight='weight')
-      if input_distance < shortest_distance:
-        return jsonify({
-            'message': f'Input distance is too small. Please increase the distance to at least {shortest_distance / 1000:.2f} km.'
-      })
-               
-      node_details = get_all_node_details()
-      finder = BiDirectionalAStar(graph, node_details, elevation_pref=elevation_pref, poi_pref=poi_pref)
+        if not nx.has_path(graph, source_node.id, target_node.id):
+            return jsonify({'message': 'Node is not reachable.'})
+        
+        shortest_distance = nx.dijkstra_path_length(graph, source_node.id, target_node.id, weight='weight')
+        if input_distance < shortest_distance:
+            return jsonify({
+                'message': f'Input distance is too small. Please increase the distance to at least {shortest_distance / 1000:.2f} km.'
+            })
+        
+        node_details = get_all_node_details()
+        finder = BiDirectionalAStar(graph, node_details, elevation_pref="max", poi_pref="max")
 
-      # Generate paths within the specified distance range
-      all_paths = finder.find_paths_within_distance(source_node.id, target_node.id, input_distance)
-      
-      if len(all_paths) == 0:
-        raise Exception("No route found.")
-      
-      paths = []
-      for route, total_distance in all_paths:
-          elevation_change, poi_count = 0.0, 0
-          path_coordinates = [(node_details[node_id]['latitude'], node_details[node_id]['longitude']) for node_id in route]
-          poi_nodes = []
-          for j in range(len(route) - 1):
-              node_id, next_node_id = route[j], route[j + 1]
-              elevation_diff = abs(node_details[next_node_id]['elevation'] - node_details[node_id]['elevation'])
-              elevation_change += elevation_diff
-              if node_details[node_id]['is_poi']:
-                  poi_nodes.append((node_details[node_id]['latitude'], node_details[node_id]['longitude']))
-                  poi_count += 1
-          
-          paths.append({
-              "path_segments": path_coordinates,
-              "poi_nodes": poi_nodes,
-              "distance": round(total_distance / 1000, 2),
-              "elevation_change": round(elevation_change, 2),
-              "poi_count": poi_count
-          })
-      
-      # Normalize scores based on preferences
-      elevation_changes = [path["elevation_change"] for path in paths]
-      poi_counts = [path["poi_count"] for path in paths]
-      min_elev, max_elev = min(elevation_changes), max(elevation_changes)
-      min_poi, max_poi = min(poi_counts), max(poi_counts)
+        all_paths = finder.find_paths_within_distance(source_node.id, target_node.id, input_distance)
 
-      def calculate_score(path):
-          if elevation_pref == "max":
-              elevation_score = (path["elevation_change"] - min_elev) / (max_elev - min_elev) if max_elev > min_elev else 0
-          else:
-              elevation_score = (max_elev - path["elevation_change"]) / (max_elev - min_elev) if max_elev > min_elev else 0
+        def filter_paths(paths):
+            filtered_paths = []
+            elevation_changes = [] 
+            poi_counts = [] 
 
-          if poi_pref == "max":
-              poi_score = (path["poi_count"] - min_poi) / (max_poi - min_poi) if max_poi > min_poi else 0
-          else:
-              poi_score = (max_poi - path["poi_count"]) / (max_poi - min_poi) if max_poi > min_poi else 0
+            min_elev, max_elev = map(int, elevation_range.split('-') if '-' in elevation_range else (1000, float('inf')))
 
-          # Weighted sum for multi-objective score
-          return 0.5 * elevation_score + 0.5 * poi_score
+            for path, total_distance in paths:
+                elevation_change, poi_count = 0.0, 0
+                for i in range(len(path) - 1):
+                    node_id, next_node_id = path[i], path[i + 1]
+                    elevation_diff = abs(node_details[next_node_id]['elevation'] - node_details[node_id]['elevation'])
+                    elevation_change += elevation_diff
+                    if node_details[node_id]['is_poi']:
+                        poi_count += 1
+                
+                elevation_changes.append(elevation_change)
+                poi_counts.append(poi_count)
 
-      # Get the best path based on the calculated scores
-      best_path = max(paths, key=calculate_score)
+                if priority_factor == 'elevation':
+                    if min_elev <= elevation_change <= max_elev:
+                        filtered_paths.append((path, total_distance, elevation_change, poi_count))
+                elif priority_factor == 'poi' and poi_count >= poi_min:
+                    filtered_paths.append((path, total_distance, elevation_change, poi_count))
+            
+            if priority_factor == 'poi':
+                filtered_paths.sort(key=lambda p: abs(p[2] - (min_elev + max_elev) / 2)) 
+            elif priority_factor == 'elevation':
+                filtered_paths.sort(key=lambda p: abs(p[3] - poi_min))
+            
+            return filtered_paths, elevation_changes, poi_counts
+
+        valid_paths, elevation_changes, poi_counts = filter_paths(all_paths)
+
+        if priority_factor == 'elevation' and not valid_paths:
+            min_elevation_change = min(elevation_changes) if elevation_changes else 0
+            max_elevation_change = max(elevation_changes) if elevation_changes else 0
+            return jsonify({
+                'message': f"No path exists within the current elevation range. "
+                           f"The minimum elevation change is: {min_elevation_change:.2f} m, "
+                           f"and the maximum elevation change is: {max_elevation_change:.2f} m."
+            })
+
+        if priority_factor == 'poi' and not valid_paths:
+            min_poi_count = min(poi_counts) if poi_counts else 0
+            max_poi_count = max(poi_counts) if poi_counts else 0
+            return jsonify({
+                'message': f"No path exists within the current POI limit. "
+                           f"The minimum POIs count is: {min_poi_count}, "
+                           f"and the maximum POIs count is: {max_poi_count}."
+            })
+
+        if not valid_paths:
+            raise Exception("No route found.")
+
+        paths = []
+        for route, total_distance, elevation_change, poi_count in valid_paths:
+            path_coordinates = [(node_details[node_id]['latitude'], node_details[node_id]['longitude']) for node_id in route]
+            poi_nodes = [(node_details[node_id]['latitude'], node_details[node_id]['longitude'])
+                         for node_id in route if node_details[node_id]['is_poi']]
+
+            paths.append({
+                "path_segments": path_coordinates,
+                "poi_nodes": poi_nodes,
+                "distance": round(total_distance / 1000, 2),
+                "elevation_change": round(elevation_change, 2),
+                "poi_count": poi_count
+            })
+
+        best_path = paths[0]
     
-      return jsonify({"paths": paths, "best_path": best_path})
+        return jsonify({"paths": paths, "best_path": best_path})
     except Exception as e:
         response = {
-        'message': 'Route not found.',
-        'error': str(e)
+            'message': 'Route not found.',
+            'error': str(e)
         }
         return jsonify(response), 404
+
 
 if __name__ == '__main__':
     with app.app_context():
