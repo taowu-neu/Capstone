@@ -41,9 +41,9 @@ function App() {
   const [elevationRange, setElevationRange] = useState("0-200");
   const [poiMin, setPoiMin] = useState(0);
   const [priorityFactor, setPriorityFactor] = useState("elevation");
-  const [distance, setDistance] = useState("N/A");
-  const [elevationChange, setElevationChange] = useState("N/A");
-  const [poiCount, setPoiCount] = useState("N/A");
+  const [distance, setDistance] = useState("");
+  const [elevationChange, setElevationChange] = useState("");
+  const [poiCount, setPoiCount] = useState("");
   const [pathData, setPathData] = useState([]);
   const [startLat, setStartLat] = useState(defaultSource[0]);
   const [startLng, setStartLng] = useState(defaultSource[1]);
@@ -105,6 +105,8 @@ function App() {
           padding: "16px",
           borderRadius: "8px",
           boxShadow: "0px 4px 6px rgba(0,0,0,0.1)",
+          maxWidth: "300px",
+          width: "100%",
         }}
       >
         {/* Start Point Input Fields */}

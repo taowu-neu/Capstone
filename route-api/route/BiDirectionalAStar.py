@@ -9,24 +9,7 @@ class BiDirectionalAStar:
         self.poi_pref = poi_pref
 
     def heuristic(self, node, neighbor):
-        """Heuristic that considers only elevation difference and POI status between the current node and its neighbor."""
-        # Adjust weights based on user preferences for elevation and POI
-        weight_factor_elevation = 0.6 if self.elevation_pref == "max" else 0.4
-        weight_factor_poi = 0.6 if self.poi_pref == "max" else 0.4
-
-        node_data, neighbor_data = self.node_details[node], self.node_details[neighbor]
-
-        # Calculate elevation difference between current node and neighbor
-        elevation_diff = abs(node_data['elevation'] - neighbor_data['elevation'])
-
-        # Check if the neighbor is a POI: treat POI as 1, non-POI as 0
-        neighbor_is_poi = 1 if neighbor_data['is_poi'] else 0
-
-        # Weighted heuristic sum, considering elevation difference and POI status
-        return (
-            weight_factor_elevation * elevation_diff +
-            weight_factor_poi * neighbor_is_poi
-        )
+        return 0
 
     def find_paths_within_distance(self, start, goal, target_distance):
         """Find paths from start to goal within the target distance range."""
