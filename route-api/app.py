@@ -9,11 +9,14 @@ from create_graph import build_graph
 from controller.node import find_closest_node
 from sqlalchemy import text
 import networkx as nx
+import requests
 
 load_dotenv()
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+CORS(app)
 
 # Cache all node details in memory for faster access
 def get_all_node_details():
@@ -29,13 +32,35 @@ def get_all_node_details():
         for row in result
     }
 
+@app.route('/proxy/google_places', methods=['GET'])
+def proxy_google_places():
+    """Proxy route for Google Places API Autocomplete."""
+    google_api_key = "AIzaSyDBpCjhtC6Ne9GqU84l4qLcMs4O_gzDwyM"
+    input_text = request.args.get("input")
+    url = f"https://maps.googleapis.com/maps/api/place/autocomplete/json?input={input_text}&key={google_api_key}"
+
+    response = requests.get(url)
+    return jsonify(response.json())
+
+@app.route('/proxy/google_geocode', methods=['GET'])
+def proxy_google_geocode():
+    """Proxy route for Google Geocode API."""
+    google_api_key = "AIzaSyDBpCjhtC6Ne9GqU84l4qLcMs4O_gzDwyM"
+    place_id = request.args.get("place_id")
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?place_id={place_id}&key={google_api_key}"
+
+    response = requests.get(url)
+    if response.status_code != 200:
+        return jsonify({"error": "Failed to fetch geocode data"}), 500
+    return jsonify(response.json())
+
 @app.route('/route', methods=['POST'])
 def get_route():
     try:
         data = request.get_json()
         source = data.get('source')
         target = data.get('target')
-        input_distance = data.get('input_distance') * 1000  # Convert km to meters
+        input_distance = data.get('input_distance') * 1000 
         elevation_range = data.get('elevation_range')
         poi_min = data.get('poi_min')
         priority_factor = data.get('priority_factor')
@@ -139,7 +164,6 @@ def get_route():
 
 if __name__ == '__main__':
     with app.app_context():
-        CORS(app)
         db.init_app(app)
         graph = build_graph()
     app.run(debug=True)

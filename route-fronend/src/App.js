@@ -5,7 +5,7 @@ import {
   Polyline,
   Marker,
   Popup,
-  useMap
+  useMap,
 } from "react-leaflet";
 import {
   TextField,
@@ -19,15 +19,12 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Autocomplete,
 } from "@mui/material";
 import "./App.css";
 import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
 import L from "leaflet";
-
-// Default coordinates for source and target
-const defaultSource = [49.2292, -122.9932];
-const defaultTarget = [49.2813912, -123.1217871];
 
 let DefaultIcon = L.icon({
   iconUrl: icon,
@@ -35,6 +32,8 @@ let DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+const BACKEND_BASE_URL = "http://127.0.0.1:5000";
 
 function App() {
   const [distanceInput, setDistanceInput] = useState("");
@@ -45,11 +44,63 @@ function App() {
   const [elevationChange, setElevationChange] = useState("");
   const [poiCount, setPoiCount] = useState("");
   const [pathData, setPathData] = useState([]);
-  const [startLat, setStartLat] = useState(defaultSource[0]);
-  const [startLng, setStartLng] = useState(defaultSource[1]);
-  const [endLat, setEndLat] = useState(defaultTarget[0]);
-  const [endLng, setEndLng] = useState(defaultTarget[1]);
+  const [startPlace, setStartPlace] = useState("");
+  const [endPlace, setEndPlace] = useState("");
+  const [startCoords, setStartCoords] = useState(null);
+  const [endCoords, setEndCoords] = useState(null);
+  const [startOptions, setStartOptions] = useState([]);
+  const [endOptions, setEndOptions] = useState([]);
   const [poiNodes, setPoiNodes] = useState([]);
+
+  const fetchPlaceSuggestions = async (input, setOptions) => {
+    if (!input || input.trim() === "") {
+      setOptions([]);
+      return;
+    }
+
+    const url = `${BACKEND_BASE_URL}/proxy/google_places?input=${encodeURIComponent(
+      input
+    )}`;
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch suggestions");
+      const data = await response.json();
+
+      if (data.status === "OK") {
+        const options = data.predictions.map((place) => ({
+          label: place.description,
+          placeId: place.place_id,
+        }));
+        setOptions(options);
+      } else {
+        console.error("Google API Error:", data.error_message);
+        setOptions([]);
+      }
+    } catch (error) {
+      console.error("Error fetching place suggestions:", error);
+      setOptions([]);
+    }
+  };
+
+  const fetchCoordinatesFromPlaceId = async (placeId) => {
+    const url = `${BACKEND_BASE_URL}/proxy/google_geocode?place_id=${placeId}`;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch coordinates");
+      const data = await response.json();
+      if (data.status === "OK") {
+        const location = data.results[0].geometry.location;
+        return { lat: location.lat, lng: location.lng };
+      } else {
+        console.error("Google Geocode API Error:", data.error_message);
+        return null;
+      }
+    } catch (error) {
+      console.error("Error fetching coordinates:", error);
+      return null;
+    }
+  };
 
   const calculateRoute = async () => {
     const inputDistance = parseFloat(distanceInput);
@@ -58,13 +109,18 @@ function App() {
       return;
     }
 
+    if (!startCoords || !endCoords) {
+      alert("Please select valid start and end places.");
+      return;
+    }
+
     try {
-      const response = await fetch("http://127.0.0.1:5000/route", {
+      const response = await fetch(`${BACKEND_BASE_URL}/route`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          source: [startLat, startLng],
-          target: [endLat, endLng],
+          source: [startCoords.lat, startCoords.lng],
+          target: [endCoords.lat, endCoords.lng],
           input_distance: inputDistance,
           elevation_range: elevationRange,
           poi_min: poiMin,
@@ -74,7 +130,6 @@ function App() {
 
       const data = await response.json();
       if (data.message) {
-
         alert(data.message);
         return;
       }
@@ -109,45 +164,47 @@ function App() {
           width: "100%",
         }}
       >
-        {/* Start Point Input Fields */}
-        <Box display="flex" justifyContent="space-between" sx={{ mb: 2 }}>
-          <TextField
-            label="Start Latitude"
-            variant="outlined"
-            type="number"
-            fullWidth
-            value={startLat}
-            onChange={(e) => setStartLat(parseFloat(e.target.value))}
-          />
-          <TextField
-            label="Start Longitude"
-            variant="outlined"
-            type="number"
-            fullWidth
-            value={startLng}
-            onChange={(e) => setStartLng(parseFloat(e.target.value))}
-          />
-        </Box>
+        <Autocomplete
+          options={startOptions}
+          getOptionLabel={(option) => option.label}
+          onInputChange={(e, value) => {
+            setStartPlace(value);
+            fetchPlaceSuggestions(value, setStartOptions);
+          }}
+          onChange={async (e, value) => {
+            if (value) {
+              const coords = await fetchCoordinatesFromPlaceId(value.placeId);
+              setStartCoords(coords);
+            } else {
+              setStartCoords(null);
+            }
+          }}
+          renderInput={(params) => (
+            <TextField {...params} label="Start Place" variant="outlined" />
+          )}
+          sx={{ mb: 2 }}
+        />
 
-        {/* End Point Input Fields */}
-        <Box display="flex" justifyContent="space-between" sx={{ mb: 2 }}>
-          <TextField
-            label="End Latitude"
-            variant="outlined"
-            type="number"
-            fullWidth
-            value={endLat}
-            onChange={(e) => setEndLat(parseFloat(e.target.value))}
-          />
-          <TextField
-            label="End Longitude"
-            variant="outlined"
-            type="number"
-            fullWidth
-            value={endLng}
-            onChange={(e) => setEndLng(parseFloat(e.target.value))}
-          />
-        </Box>
+        <Autocomplete
+          options={endOptions}
+          getOptionLabel={(option) => option.label}
+          onInputChange={(e, value) => {
+            setEndPlace(value);
+            fetchPlaceSuggestions(value, setEndOptions);
+          }}
+          onChange={async (e, value) => {
+            if (value) {
+              const coords = await fetchCoordinatesFromPlaceId(value.placeId);
+              setEndCoords(coords);
+            } else {
+              setEndCoords(null);
+            }
+          }}
+          renderInput={(params) => (
+            <TextField {...params} label="End Place" variant="outlined" />
+          )}
+          sx={{ mb: 2 }}
+        />
 
         <TextField
           sx={{ mb: 2 }}
@@ -184,7 +241,6 @@ function App() {
           sx={{ mb: 2 }}
         />
 
-        {/* Priority Factor */}
         <FormControl component="fieldset" sx={{ mb: 2 }}>
           <Typography>Priority Factor</Typography>
           <RadioGroup
@@ -234,25 +290,25 @@ function App() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {/* Markers for Start and End Points */}
-        <Marker position={[startLat, startLng]}>
-          <Popup>
-            Start Point <br /> Latitude: {startLat}, Longitude: {startLng}
-          </Popup>
-        </Marker>
+        {startCoords && (
+          <Marker position={[startCoords.lat, startCoords.lng]}>
+            <Popup>
+              Start Point <br /> {startPlace}
+            </Popup>
+          </Marker>
+        )}
 
-        <Marker position={[endLat, endLng]}>
-          <Popup>
-            End Point <br /> Latitude: {endLat}, Longitude: {endLng}
-          </Popup>
-        </Marker>
+        {endCoords && (
+          <Marker position={[endCoords.lat, endCoords.lng]}>
+            <Popup>
+              End Point <br /> {endPlace}
+            </Popup>
+          </Marker>
+        )}
 
-        {/* Mark POI Nodes */}
         {poiNodes.map((poi, index) => (
           <Marker key={index} position={[poi[0], poi[1]]}>
-            <Popup>
-              POI {index + 1} <br />
-            </Popup>
+            <Popup>POI {index + 1}</Popup>
           </Marker>
         ))}
 
@@ -264,25 +320,9 @@ function App() {
             opacity={0.7}
           />
         )}
-         <MapCenterUpdater pathData={pathData} />
       </MapContainer>
     </div>
   );
 }
 
-// Component to reset the map center after route calculation
-const MapCenterUpdater = ({ pathData }) => {
-  const map = useMap();
-
-  React.useEffect(() => {
-    if (pathData.length > 0) {
-      const bounds = L.latLngBounds(pathData);
-      map.fitBounds(bounds); // Fit the map to the bounds of the path
-    }
-  }, [pathData, map]);
-
-  return null; // This component does not render anything visible
-};
-
 export default App;
-
