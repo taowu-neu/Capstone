@@ -20,14 +20,18 @@ CORS(app)
 
 # Cache all node details in memory for faster access
 def get_all_node_details():
-    query = text("SELECT id, longitude, latitude, elevation, is_poi FROM nodes;")
+    query = text("""
+        SELECT id, longitude, latitude, elevation, is_poi, poi_desc
+        FROM nodes;
+    """)
     result = db.session.execute(query).fetchall()
     return {
         row.id: {
             "longitude": row.longitude,
             "latitude": row.latitude,
             "elevation": float(row.elevation),
-            "is_poi": row.is_poi
+            "is_poi": row.is_poi,
+            "poi_desc": row.poi_desc
         }
         for row in result
     }
@@ -60,7 +64,7 @@ def get_route():
         data = request.get_json()
         source = data.get('source')
         target = data.get('target')
-        input_distance = data.get('input_distance') * 1000 
+        input_distance = data.get('input_distance') * 1000  # Convert km to meters
         elevation_range = data.get('elevation_range')
         poi_min = data.get('poi_min')
         priority_factor = data.get('priority_factor')
@@ -140,8 +144,10 @@ def get_route():
         paths = []
         for route, total_distance, elevation_change, poi_count in valid_paths:
             path_coordinates = [(node_details[node_id]['latitude'], node_details[node_id]['longitude']) for node_id in route]
-            poi_nodes = [(node_details[node_id]['latitude'], node_details[node_id]['longitude'])
-                         for node_id in route if node_details[node_id]['is_poi']]
+            poi_nodes = [{
+                "coordinates": (node_details[node_id]['latitude'], node_details[node_id]['longitude']),
+                "description": node_details[node_id]['poi_desc'] if node_details[node_id].get("poi_desc") else "Unknown POI"
+            } for node_id in route if node_details[node_id]['is_poi']]
 
             paths.append({
                 "path_segments": path_coordinates,
@@ -160,6 +166,7 @@ def get_route():
             'error': str(e)
         }
         return jsonify(response), 404
+
 
 
 if __name__ == '__main__':

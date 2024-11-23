@@ -1,70 +1,59 @@
-# Getting Started with Create React App
+# Running Routes for Out-of-Towners
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Running Routes for Out-of-Towners is a web-based application designed to help runners visiting a new city find the perfect route based on their preferences for **distance**, **elevation**, and **points of interest (POIs)**. Whether you’re looking to challenge yourself with elevation changes or simply enjoy scenic landmarks while staying active, this tool creates a route tailored just for you.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Custom Route Planning**: Generates running routes based on user-defined distance and preferences.
 
-### `npm start`
+- **Elevation and POI Preferences**:
+  - Elevation range selection.
+  - Minimum POI requirement.
+  - Priority factor selection (elevation vs POIs).
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Technologies Used
 
-### `npm test`
+### Backend:
+- **Python**: Core backend language.
+- **Flask**: Backend web framework.
+- **SQLAlchemy**: Database ORM for querying nodes and edges.
+- **PostgreSQL with PostGIS**: Spatial database for geospatial data.
+- **NetworkX**: Graph library for pathfinding and graph operations.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Frontend:
+- **React**: Frontend framework.
+- **Material-UI**: For UI components.
+- **Leaflet**: Interactive maps.
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Project Structure
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Backend (`route-api/`):
+- **`app.py`**: Flask application, routes, and Google API proxies.
+- **`BiDirectionalAStar.py`**: Implementation of Bi-Directional A* algorithm to generate routes that meet the distance constraint.
+- **`controller/`**: Database query functions for nodes and edges.
+- **`database/db.py`**: SQLAlchemy database instance.
+- **`model/models.py`**: SQLAlchemy models for nodes and edges.
+- **`create_graph.py`**: Graph creation and caching logic using NetworkX.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Frontend (`route-frontend/`):
+- **`src/App.js`**: Main React application with interactive map and user inputs.
+- **`src/components/`**: Components for user interaction and result visualization.
 
-### `npm run eject`
+---
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Installation
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Prerequisites
+- Python 3.8+
+- Node.js and npm
+- PostgreSQL with PostGIS extension
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Backend Setup
+1. Clone the repository and navigate to the `route-api/` directory:
+   ```bash
+   git clone <repository-url>
+   cd route-api

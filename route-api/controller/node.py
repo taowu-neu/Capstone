@@ -1,7 +1,6 @@
 from database.db import db
 from model.models import Node
-from sqlalchemy.orm import aliased
-from sqlalchemy import func, text
+from sqlalchemy import text
 
 def find_closest_node(lon: float, lat: float):
     """Find the closest node to the given longitude and latitude."""
@@ -36,14 +35,14 @@ def get_node_coordinates(node_ids):
     return coordinates
 
 def get_node_details(node_ids):
-    """Retrieve the elevation and is_poi status for a list of node IDs."""
+    """Retrieve the elevation, is_poi status, and POI description for a list of node IDs."""
     query = text("""
         SELECT 
-            id, elevation, is_poi
+            id, elevation, is_poi, poi_desc
         FROM nodes
         WHERE id = ANY(:node_ids);
     """)
 
     result = db.session.execute(query, {"node_ids": node_ids}).fetchall()
-    details_dict = {row.id: {'elevation': float(row.elevation), 'is_poi': row.is_poi} for row in result}
+    details_dict = {row.id: {'elevation': float(row.elevation), 'is_poi': row.is_poi, 'poi_desc': row.poi_desc} for row in result}
     return details_dict

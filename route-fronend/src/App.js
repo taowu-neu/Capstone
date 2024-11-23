@@ -5,7 +5,6 @@ import {
   Polyline,
   Marker,
   Popup,
-  useMap,
 } from "react-leaflet";
 import {
   TextField,
@@ -36,13 +35,13 @@ L.Marker.prototype.options.icon = DefaultIcon;
 const BACKEND_BASE_URL = "http://127.0.0.1:5000";
 
 function App() {
-  const [distanceInput, setDistanceInput] = useState("");
+  const [distanceInput, setDistanceInput] = useState(""); // Input distance as string for safe handling
   const [elevationRange, setElevationRange] = useState("0-200");
   const [poiMin, setPoiMin] = useState(0);
   const [priorityFactor, setPriorityFactor] = useState("elevation");
-  const [distance, setDistance] = useState("");
-  const [elevationChange, setElevationChange] = useState("");
-  const [poiCount, setPoiCount] = useState("");
+  const [distance, setDistance] = useState(null); // null indicates no distance initially
+  const [elevationChange, setElevationChange] = useState(null);
+  const [poiCount, setPoiCount] = useState(null);
   const [pathData, setPathData] = useState([]);
   const [startPlace, setStartPlace] = useState("");
   const [endPlace, setEndPlace] = useState("");
@@ -237,7 +236,7 @@ function App() {
           type="number"
           fullWidth
           value={poiMin}
-          onChange={(e) => setPoiMin(parseInt(e.target.value, 10))}
+          onChange={(e) => setPoiMin(parseInt(e.target.value, 10) || 0)}
           sx={{ mb: 2 }}
         />
 
@@ -272,11 +271,11 @@ function App() {
         </Button>
 
         <div style={{ marginTop: "16px" }}>
-          <Typography variant="body1">Distance: {distance}</Typography>
+          <Typography variant="body1">Distance: {distance || "N/A"}</Typography>
           <Typography variant="body1">
-            Elevation Change: {elevationChange}
+            Elevation Change: {elevationChange || "N/A"}
           </Typography>
-          <Typography variant="body1">POI Count: {poiCount}</Typography>
+          <Typography variant="body1">POI Count: {poiCount || "N/A"}</Typography>
         </div>
       </div>
 
@@ -307,8 +306,8 @@ function App() {
         )}
 
         {poiNodes.map((poi, index) => (
-          <Marker key={index} position={[poi[0], poi[1]]}>
-            <Popup>POI {index + 1}</Popup>
+          <Marker key={index} position={poi.coordinates}>
+            <Popup>{poi.description || `POI ${index + 1}`}</Popup>
           </Marker>
         ))}
 
