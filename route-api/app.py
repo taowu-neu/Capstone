@@ -2,14 +2,14 @@ import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from database.db import db
-from model.models import Edge, Node
 from dotenv import load_dotenv
 from route.BiDirectionalAStar import BiDirectionalAStar
-from create_graph import build_graph
+from create_graph import build_graph, find_path_with_min_distance
 from controller.node import find_closest_node
 from sqlalchemy import text
 import networkx as nx
 import requests
+import traceback
 
 load_dotenv()
 app = Flask(__name__)
@@ -68,14 +68,20 @@ def get_route():
         elevation_range = data.get('elevation_range')
         poi_min = data.get('poi_min')
         priority_factor = data.get('priority_factor')
-
+        is_round_trip = False
+        round_start_to_nearest=[]
         source_node = find_closest_node(source[1], source[0])
         target_node = find_closest_node(target[1], target[0])
-
-        if not nx.has_path(graph, source_node.id, target_node.id):
+        source_node_id = source_node.id
+        target_node_id = target_node.id
+        if source_node_id == target_node_id:
+            is_round_trip = True
+            round_start_to_nearest = find_path_with_min_distance(graph, source_node_id, 100)
+            target_node_id = round_start_to_nearest[-1]
+        if not nx.has_path(graph, source_node_id, target_node_id):
             return jsonify({'message': 'Node is not reachable.'})
         
-        shortest_distance = nx.dijkstra_path_length(graph, source_node.id, target_node.id, weight='weight')
+        shortest_distance = nx.dijkstra_path_length(graph, source_node_id, target_node_id, weight='weight')
         if input_distance < shortest_distance:
             return jsonify({
                 'message': f'Input distance is too small. Please increase the distance to at least {shortest_distance / 1000:.2f} km.'
@@ -84,8 +90,11 @@ def get_route():
         node_details = get_all_node_details()
         finder = BiDirectionalAStar(graph, node_details, elevation_pref="max", poi_pref="max")
 
-        all_paths = finder.find_paths_within_distance(source_node.id, target_node.id, input_distance)
-
+        all_paths = finder.find_paths_within_distance(source_node_id, target_node_id, input_distance)
+        if len(all_paths) == 0:
+             return jsonify({
+                'message': 'No routes found.'
+            })
         def filter_paths(paths):
             filtered_paths = []
             elevation_changes = [] 
@@ -158,9 +167,12 @@ def get_route():
             })
 
         best_path = paths[0]
-    
+        if is_round_trip:
+            round_start_corordinates = [(node_details[node_id]['latitude'], node_details[node_id]['longitude']) for node_id in round_start_to_nearest[::-1]]
+            best_path['path_segments'] += round_start_corordinates
         return jsonify({"paths": paths, "best_path": best_path})
     except Exception as e:
+        traceback.print_exc()
         response = {
             'message': 'Route not found.',
             'error': str(e)
