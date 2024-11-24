@@ -1,7 +1,5 @@
 from database.db import db
 from model.models import Node
-from sqlalchemy.orm import aliased
-from sqlalchemy import func
 from sqlalchemy import text
 
 def find_closest_node(lon: float, lat: float):
@@ -19,9 +17,7 @@ def find_closest_node(lon: float, lat: float):
         ORDER BY distance
         LIMIT 1;
     """)
-    # Execute the query and return the closest node
     result = db.session.execute(query, {"lon": lon, "lat": lat}).fetchone()
-    print('find the clost node', result)
     return Node(id=result.id, longitude=result.longitude, latitude=result.latitude)
 
 def get_node_coordinates(node_ids):
@@ -32,12 +28,21 @@ def get_node_coordinates(node_ids):
         FROM nodes
         WHERE id = ANY(:node_ids);
     """)
-
-    # Execute the query with the list of node IDs
     result = db.session.execute(query, {"node_ids": node_ids}).fetchall()
 
     coordinates_dict = {row.id: (row.latitude, row.longitude) for row in result}
-    # Map the result to a list of coordinate tuples [(lat, lon), ...]
     coordinates = [coordinates_dict[node_id] for node_id in node_ids if node_id in coordinates_dict]
-    
     return coordinates
+
+def get_node_details(node_ids):
+    """Retrieve the elevation, is_poi status, and POI description for a list of node IDs."""
+    query = text("""
+        SELECT 
+            id, elevation, is_poi, poi_desc
+        FROM nodes
+        WHERE id = ANY(:node_ids);
+    """)
+
+    result = db.session.execute(query, {"node_ids": node_ids}).fetchall()
+    details_dict = {row.id: {'elevation': float(row.elevation), 'is_poi': row.is_poi, 'poi_desc': row.poi_desc} for row in result}
+    return details_dict

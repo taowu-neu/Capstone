@@ -5,3 +5,4 @@ SQLAlchemy
 networkx
 psycopg2-binary
 Flask-Cors
+joblib
