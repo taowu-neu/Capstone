@@ -37,7 +37,7 @@ Running Routes for Out-of-Towners is a web-based application designed to help ru
 ## Project Construction Details
 
 ### Data Preparation
-1. **Download OSM Data**: 
+1. **OSM Data**: 
    - The project uses OpenStreetMap (OSM) data for British Columbia, downloaded from the [Geofabrik website](https://download.geofabrik.de/north-america/canada/british-columbia.html).
 
 2. **Construct Nodes and Edges**:
@@ -81,7 +81,7 @@ Running Routes for Out-of-Towners is a web-based application designed to help ru
 - **Docker** (for database setup)
 - **PostgreSQL with PostGIS extension** (if not using Docker)
 
-### Steps to Run the Project
+## Steps to Run the Project
 
 #### 1. Data Migration
 
