@@ -11,6 +11,7 @@ cache_directory = 'cache'
 cache_graph_path = os.path.join(cache_directory, 'graph_cache.pkl')
 
 def build_graph():
+    print('build graph start...')
     # Load cached graph
     if os.path.exists(cache_graph_path):
         cached_graph = joblib.load(cache_graph_path)

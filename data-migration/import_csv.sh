@@ -36,3 +36,5 @@ psql -h db -U user -d $database -c "
         )
       update nodes set poi_desc = tmp.names, is_poi = true FROM tmp where tmp.node_id = nodes.id;
       "
+
+echo "Data migration completed."

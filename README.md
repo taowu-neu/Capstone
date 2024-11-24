@@ -79,7 +79,6 @@ Running Routes for Out-of-Towners is a web-based application designed to help ru
 - **Python 3.8+**
 - **Node.js** and **npm**
 - **Docker** (for database setup)
-- **PostgreSQL with PostGIS extension** (if not using Docker)
 
 ## Steps to Run the Project
 
@@ -90,12 +89,17 @@ Running Routes for Out-of-Towners is a web-based application designed to help ru
    cd data-migration
    ```
 
+  **Ensure that the file `csv_data/edges.csv` contains the required data. If it is missing or empty, you will need to download it manually from the repository.**
+ 
 2. Execute the following command to set up the database using Docker:
    ```bash
    docker compose up -d
    ```
 
    This command sets up a PostgreSQL database with PostGIS support and populates it with the processed OSM, elevation, and POI data.
+
+3. Wait for a few minutes and then check the Docker dashboard. Ensure that the `csv-importer` container has completed its process. You should see the following log upon successful completion:
+   ![Backend Initialization](./screenshots/docker-log.png)
 
 #### 2. Start the Backend
 
@@ -114,6 +118,17 @@ Running Routes for Out-of-Towners is a web-based application designed to help ru
     python3 app.py
    ```
 
+##### Backend Initialization
+When you first start the backend, the initialization process can take a significant amount of time. **Please be patient.**
+
+Once the process completes successfully, you will see logs indicating the progress and confirming the completion of all tasks. Kindly wait until these logs appear.
+
+If the graph is created successfully, you should see the following log:
+```
+build graph complete... Graph with 1,005,190 nodes and 1,293,780 edges
+```
+
+![Backend Initialization](./screenshots/backend-log.png)
 
 #### 3. Start the Frontend
 
