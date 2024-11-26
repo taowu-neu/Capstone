@@ -79,7 +79,12 @@ Running Routes for Out-of-Towners is a web-based application designed to help ru
 - **Python 3.8+**
 - **Node.js** and **npm**
 - **Docker** (for database setup)
+- **Git Large File Storage**: [Git LFS Documentation](https://git-lfs.github.com/)
 
+
+### Important Notes
+- **If Git LFS is not installed**, the download of  `csv_data/edges.csv` under `data-migration` may fail. Please ensure that Git LFS is properly installed and configured to handle large files in the repository.
+- Ensure that the file `csv_data/edges.csv` under `data-migration` contains the required data. If it does not contain the complete data (1,309,201 rows), you will need to download it manually from the repository and place it under the `csv_data` directory.
 ## Steps to Run the Project
 
 #### 1. Data Migration
@@ -88,8 +93,6 @@ Running Routes for Out-of-Towners is a web-based application designed to help ru
    ```bash
    cd data-migration
    ```
-
-  **Ensure that the file `csv_data/edges.csv` contains the required data. If it is missing or empty, you will need to download it manually from the repository.**
  
 2. Execute the following command to set up the database using Docker:
    ```bash
@@ -98,7 +101,8 @@ Running Routes for Out-of-Towners is a web-based application designed to help ru
 
    This command sets up a PostgreSQL database with PostGIS support and populates it with the processed OSM, elevation, and POI data.
 
-3. Wait for a few minutes and then check the Docker dashboard. Ensure that the `csv-importer` container has completed its process. You should see the following log upon successful completion:
+3. Wait for a few minutes and then check the Docker dashboard. Ensure that the `csv-importer` container has completed its process. You should see the following log upon successful completion.
+- **Note**: You cannot start the backend unless this process is complete, as the data is required for the backend to function properly.
    ![Backend Initialization](./screenshots/docker-log.png)
 
 #### 2. Start the Backend
