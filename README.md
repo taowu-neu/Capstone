@@ -2,6 +2,12 @@
 
 Running Routes for Out-of-Towners is a web-based application designed to help runners visiting a new city find the perfect route based on their preferences for **distance**, **elevation**, and **points of interest (POIs)**. Whether you’re looking to challenge yourself with elevation changes or simply enjoy scenic landmarks while staying active, this tool creates a route tailored just for you.
 
+## Project Report
+
+The project report is available here:
+
+[Download the report](./report/final_report.pdf)
+
 ## Features
 
 - **Custom Route Planning**: Generates running routes based on user-defined distance and preferences.
